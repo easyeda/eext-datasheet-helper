@@ -1,55 +1,83 @@
 [简体中文](#) | [English](./README.en.md) | [繁體中文](./README.zh-Hant.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)
 
-# pro-api-sdk
+# 数据手册助手 (Datasheet Helper)
 
-嘉立创EDA & EasyEDA 专业版扩展 API 开发工具
+嘉立创EDA & EasyEDA 专业版数据手册提取与分析扩展
 
-<a href="https://github.com/easyeda/pro-api-sdk" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/stars/easyeda/pro-api-sdk" alt="GitHub Repo Stars" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/pro-api-sdk/issues" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/issues/easyeda/pro-api-sdk" alt="GitHub Issues" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/pro-api-sdk" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/repo-size/easyeda/pro-api-sdk" alt="GitHub Repo Size" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/pro-api-sdk" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://www.npmjs.com/package/@jlceda/pro-api-types" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/npm/v/%40jlceda%2Fpro-api-types?label=pro-api-types" alt="NPM Version" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://www.npmjs.com/package/@jlceda/pro-api-types" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/npm/d18m/%40jlceda%2Fpro-api-types" alt="NPM Downloads" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
+<a href="https://github.com/easyeda/eext-datasheet-helper" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/stars/easyeda/eext-datasheet-helper" alt="GitHub Repo Stars" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/eext-datasheet-helper/issues" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/issues/easyeda/eext-datasheet-helper" alt="GitHub Issues" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/eext-datasheet-helper" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
 
-> [!NOTE]
->
-> 详细开发文档请访问：[https://prodocs.lceda.cn/cn/api/guide/](https://prodocs.lceda.cn/cn/api/guide/)
+## 功能简介
 
-## 进入开发
+数据手册助手是一款基于 AI 的 PDF 数据手册分析工具，作为嘉立创EDA专业版的扩展使用。支持将器件数据手册（Datasheet）等 PDF 文档内容提取为结构化文本，并通过 AI 对话方式帮助工程师快速获取技术参数和关键信息。
 
-本开发工具组包含了用于开发 [嘉立创EDA专业版](https://pro.lceda.cn/) 扩展包的所有环境和工具，并内置了 ESLint 的推荐规则。
+### 主要功能
 
-1. 克隆 [pro-api-sdk](https://github.com/easyeda/pro-api-sdk) 项目仓库到本地
+- **PDF 内容提取**：基于 PDF.js 的版面分析，支持表格识别、多栏布局解析和标题检测
+- **AI 智能问答**：接入 OpenAI 兼容 API，基于文档内容进行精准问答
+- **数据手册优化**：针对器件 Datasheet 场景优化，保留参数表格结构
+- **多场景可用**：在原理图编辑器、PCB 编辑器和主页中均可使用
 
-    Gitee:
+## 快速开始
+
+### 安装扩展
+
+1. 从 [Releases](https://github.com/easyeda/eext-datasheet-helper/releases) 下载最新 `.zip` 扩展包
+2. 在嘉立创EDA专业版中，进入 **扩展管理** → **安装本地扩展**，选择下载的文件
+
+### 配置 API
+
+1. 在扩展菜单中点击 **设置**
+2. 填写以下信息：
+   - **API URL**：OpenAI 兼容接口地址（如 `https://api.openai.com/v1/chat/completions`）
+   - **API Key**：你的 API 密钥
+   - **Model**：使用的模型名称（如 `gpt-4o`）
+
+### 使用方法
+
+1. 在扩展菜单中点击 **打开数据手册助手**
+2. 拖拽或点击上传 PDF 文件
+3. 在对话框中输入问题，AI 将基于 PDF 内容进行回答
+
+## 本地开发
+
+1. 克隆项目仓库
 
     ```shell
-    git clone --depth=1 https://gitee.com/jlceda/pro-api-sdk.git
+    git clone --depth=1 https://github.com/easyeda/eext-datasheet-helper.git
     ```
 
-    GitHub:
-
-    ```shell
-    git clone --depth=1 https://github.com/easyeda/pro-api-sdk.git
-    ```
-
-2. 初始化开发环境（安装依赖）
+2. 安装依赖
 
     ```shell
     npm install
     ```
 
-3. 进行些许变更 ...
-
-    - 修改文件夹名称为你的项目名称
-    - 参考 [开发指南](https://prodocs.lceda.cn/cn/api/guide/how-to-start.html#ii-%E6%89%A9%E5%B1%95%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6) 修改 `extension.json` 中的 `name`、`displayName`、`description`、`publisher` 字段
-    - 结合 [扩展 API 参考文档](https://prodocs.lceda.cn/cn/api/reference/pro-api.html) 编写你的代码
-
-4. 编译扩展包
+3. 编译扩展包
 
     ```shell
     npm run build
     ```
 
-5. 在 嘉立创EDA专业版 中安装生成在 `./build/dist/` 下的扩展包
+4. 安装 `./build/dist/` 目录下生成的扩展包到嘉立创EDA专业版
+
+## 项目结构
+
+```
+eext-datasheet-helper/
+├── src/            # 扩展入口（TypeScript）
+├── iframe/         # 前端界面（PDF提取 + AI对话）
+│   ├── index.html  # 主页面
+│   ├── app.js      # 核心逻辑（PDF解析、API调用）
+│   └── style.css   # 样式
+├── server/         # 服务端逻辑
+├── config/         # 构建配置
+├── locales/        # 国际化资源
+├── images/         # 图标资源
+└── extension.json  # 扩展配置
+```
 
 ## 开源许可
 
-<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/pro-api-sdk" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
+<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/eext-datasheet-helper" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
 
-本开发工具组使用 [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/) 开源许可协议，你仅可以将 **嘉立创EDA**、**EasyEDA** 商标信息用于依托于本工具组开发的扩展包的 **功能描述部分** 和 **开源发布的标题部分**。
+本项目使用 [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/) 开源许可协议。

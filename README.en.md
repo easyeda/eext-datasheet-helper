@@ -1,47 +1,83 @@
 [简体中文](./README.md) | [English](#) | [繁體中文](./README.zh-Hant.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)
 
-# pro-api-sdk
+# Datasheet Helper
 
-JLCEDA & EasyEDA Pro Extension API Development Kit
+JLCEDA & EasyEDA Pro Extension for PDF Datasheet Extraction and Analysis
 
-<a href="https://github.com/easyeda/pro-api-sdk" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/stars/easyeda/pro-api-sdk" alt="GitHub Repo Stars" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/pro-api-sdk/issues" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/issues/easyeda/pro-api-sdk" alt="GitHub Issues" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/pro-api-sdk" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/repo-size/easyeda/pro-api-sdk" alt="GitHub Repo Size" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/pro-api-sdk" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://www.npmjs.com/package/@jlceda/pro-api-types" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/npm/v/%40jlceda%2Fpro-api-types?label=pro-api-types" alt="NPM Version" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://www.npmjs.com/package/@jlceda/pro-api-types" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/npm/d18m/%40jlceda%2Fpro-api-types" alt="NPM Downloads" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
+<a href="https://github.com/easyeda/eext-datasheet-helper" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/stars/easyeda/eext-datasheet-helper" alt="GitHub Repo Stars" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://github.com/easyeda/eext-datasheet-helper/issues" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/issues/easyeda/eext-datasheet-helper" alt="GitHub Issues" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>&nbsp;<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/eext-datasheet-helper" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
 
-> [!NOTE]
->
-> For more information on the development of EasyEDA Pro Extension, please visit: [https://prodocs.easyeda.com/en/api/guide/](https://prodocs.easyeda.com/en/api/guide/)
+## Overview
 
-## Enter Development
+Datasheet Helper is an AI-powered PDF datasheet analysis tool for JLCEDA & EasyEDA Pro Edition. It extracts content from component datasheets and other PDF documents into structured text, enabling engineers to quickly retrieve technical specifications and key information through AI-powered conversations.
 
-This development tool set contains all the environments and tools for developing the [EasyEDA Pro Edition](https://pro.easyeda.com/) extension package, and has built-in recommended rules for ESLint.
+### Key Features
 
-1. Clone the [pro-api-sdk](https://github.com/easyeda/pro-api-sdk) project repository to your local computer
+- **PDF Content Extraction**: Layout analysis powered by PDF.js, with support for table recognition, multi-column layout parsing, and heading detection
+- **AI-Powered Q&A**: Integrates with OpenAI-compatible APIs for precise document-based question answering
+- **Datasheet Optimized**: Tailored for component datasheets, preserving parameter table structures
+- **Multi-Context**: Available in Schematic Editor, PCB Editor, and Home page
+
+## Quick Start
+
+### Install the Extension
+
+1. Download the latest `.zip` package from [Releases](https://github.com/easyeda/eext-datasheet-helper/releases)
+2. In EasyEDA Pro Edition, go to **Extension Manager** → **Install Local Extension** and select the downloaded file
+
+### Configure API
+
+1. Click **Settings** in the extension menu
+2. Fill in the following:
+   - **API URL**: OpenAI-compatible endpoint (e.g. `https://api.openai.com/v1/chat/completions`)
+   - **API Key**: Your API key
+   - **Model**: Model name to use (e.g. `gpt-4o`)
+
+### Usage
+
+1. Click **Open Datasheet Helper** in the extension menu
+2. Drag and drop or click to upload a PDF file
+3. Type your question in the chat box — the AI will answer based on the PDF content
+
+## Local Development
+
+1. Clone the repository
 
     ```shell
-    git clone --depth=1 https://github.com/easyeda/pro-api-sdk.git
+    git clone --depth=1 https://github.com/easyeda/eext-datasheet-helper.git
     ```
 
-2. Initializing the development environment (installing dependencies)
+2. Install dependencies
 
     ```shell
     npm install
     ```
 
-3. Make your changes ...
-
-    - Rename the folder to your project name
-    - Refer to the [Development Guide](https://prodocs.lceda.cn/en/api/guide/how-to-start.html#ii-extension-configuration) to modify the `name`, `displayName`, `description`, and `publisher` fields in `extension.json`
-    - Write your code using the [Extension API Reference](https://prodocs.lceda.cn/en/api/reference/pro-api.html)
-
-4. Compile the extension package
+3. Build the extension
 
     ```shell
     npm run build
     ```
 
-5. Install the extension package generated under `./build/dist/` in EasyEDA Pro Edition
+4. Install the generated extension from `./build/dist/` into EasyEDA Pro Edition
 
-## Open-source License
+## Project Structure
 
-<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/pro-api-sdk" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
+```
+eext-datasheet-helper/
+├── src/            # Extension entry (TypeScript)
+├── iframe/         # Frontend UI (PDF extraction + AI chat)
+│   ├── index.html  # Main page
+│   ├── app.js      # Core logic (PDF parsing, API calls)
+│   └── style.css   # Styles
+├── server/         # Server-side logic
+├── config/         # Build configuration
+├── locales/        # Internationalization resources
+├── images/         # Icon assets
+└── extension.json  # Extension manifest
+```
 
-This development tool uses the [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/) open source license agreement. You can only use the **嘉立创EDA** and **EasyEDA** trademark information for the **function description part** and **open source release title part** of the extension package developed based on this tool.
+## License
+
+<a href="https://choosealicense.com/licenses/apache-2.0/" style="vertical-align: inherit;" target="_blank"><img src="https://img.shields.io/github/license/easyeda/eext-datasheet-helper" alt="GitHub License" class="not-medium-zoom-image" style="display: inline; vertical-align: inherit;" /></a>
+
+This project is licensed under the [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/).

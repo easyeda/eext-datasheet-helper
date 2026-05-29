@@ -1,0 +1,80 @@
+{
+	"name": "pdf-assistant",
+	"uuid": "f7a3b8c1d2e4f5a6b7c8d9e0f1a2b3c4",
+	"displayName": "PDF Assistant",
+	"description": "AI-powered PDF content extraction and analysis assistant",
+	"version": "1.0.0",
+	"publisher": "Developer",
+	"engines": {
+		"eda": "^3.0.0"
+	},
+	"license": "Apache-2.0",
+	"categories": "Other",
+	"keywords": [
+		"PDF",
+		"AI",
+		"Assistant"
+	],
+	"images": {
+		"logo": "./images/logo.png"
+	},
+	"activationEvents": {},
+	"entry": "./dist/index",
+	"dependentExtensions": {},
+	"headerMenus": {
+		"home": [
+			{
+				"id": "pdfassistant-home-main",
+				"title": "PDF Assistant",
+				"menuItems": [
+					{
+						"id": "pdfassistant-home-open",
+						"title": "Open PDF Assistant",
+						"registerFn": "openPdfAssistant"
+					},
+					{
+						"id": "pdfassistant-home-settings",
+						"title": "Settings",
+						"registerFn": "openSettings"
+					}
+				]
+			}
+		],
+		"sch": [
+			{
+				"id": "pdfassistant-sch-main",
+				"title": "PDF Assistant",
+				"menuItems": [
+					{
+						"id": "pdfassistant-sch-open",
+						"title": "Open PDF Assistant",
+						"registerFn": "openPdfAssistant"
+					},
+					{
+						"id": "pdfassistant-sch-settings",
+						"title": "Settings",
+						"registerFn": "openSettings"
+					}
+				]
+			}
+		],
+		"pcb": [
+			{
+				"id": "pdfassistant-pcb-main",
+				"title": "PDF Assistant",
+				"menuItems": [
+					{
+						"id": "pdfassistant-pcb-open",
+						"title": "Open PDF Assistant",
+						"registerFn": "openPdfAssistant"
+					},
+					{
+						"id": "pdfassistant-pcb-settings",
+						"title": "Settings",
+						"registerFn": "openSettings"
+					}
+				]
+			}
+		]
+	}
+}

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+	<title>PDF Assistant Settings</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<style>
+		:root {
+			--bg: #ffffff;
+			--bg-secondary: #f7f7f8;
+			--text: #1a1a1a;
+			--text-secondary: #6b6b6b;
+			--border: #e5e5e5;
+			--accent: #2563eb;
+			--accent-hover: #1d4ed8;
+			--success: #16a34a;
+			--error: #dc2626;
+			--radius: 8px;
+		}
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			font-size: 14px;
+			color: var(--text);
+			background: var(--bg);
+			padding: 24px;
+		}
+		h2 { font-size: 18px; margin-bottom: 20px; }
+		.field { margin-bottom: 16px; }
+		label {
+			display: block;
+			font-size: 13px;
+			font-weight: 500;
+			color: var(--text-secondary);
+			margin-bottom: 6px;
+		}
+		input[type="text"], input[type="password"] {
+			width: 100%;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			font-size: 14px;
+			color: var(--text);
+			background: var(--bg);
+			outline: none;
+			transition: border-color 0.15s;
+		}
+		input:focus { border-color: var(--accent); }
+		.hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+		.actions {
+			display: flex;
+			gap: 10px;
+			margin-top: 24px;
+		}
+		button {
+			padding: 10px 20px;
+			border: none;
+			border-radius: var(--radius);
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+		.btn-primary {
+			background: var(--accent);
+			color: white;
+		}
+		.btn-primary:hover { background: var(--accent-hover); }
+		.btn-secondary {
+			background: var(--bg-secondary);
+			color: var(--text);
+			border: 1px solid var(--border);
+		}
+		.btn-secondary:hover { background: #ececf1; }
+		.toast {
+			position: fixed;
+			top: 16px;
+			left: 50%;
+			transform: translateX(-50%);
+			padding: 10px 20px;
+			border-radius: var(--radius);
+			font-size: 13px;
+			font-weight: 500;
+			opacity: 0;
+			transition: opacity 0.3s;
+			z-index: 100;
+		}
+		.toast.show { opacity: 1; }
+		.toast.success { background: #dcfce7; color: var(--success); }
+		.toast.error { background: #fef2f2; color: var(--error); }
+	</style>
+</head>
+<body>
+	<h2>PDF Assistant Settings</h2>
+
+	<div class="field">
+		<label for="api-url">API URL</label>
+		<input type="text" id="api-url" placeholder="https://api.example.com/v1/chat/completions" />
+		<div class="hint">OpenAI-compatible chat completions endpoint</div>
+	</div>
+
+	<div class="field">
+		<label for="api-key">API Key</label>
+		<input type="password" id="api-key" placeholder="sk-..." />
+		<div class="hint">Authentication key for the API</div>
+	</div>
+
+	<div class="field">
+		<label for="model">Model</label>
+		<input type="text" id="model" placeholder="gpt-4o" />
+		<div class="hint">Model identifier (e.g. gpt-4o, claude-sonnet-4-20250514)</div>
+	</div>
+
+	<div class="actions">
+		<button class="btn-primary" id="btn-save">Save</button>
+		<button class="btn-secondary" id="btn-cancel">Cancel</button>
+	</div>
+
+	<div class="toast" id="toast"></div>
+
+	<script>
+	(function () {
+		'use strict';
+
+		const STORAGE_KEY = 'pdf_assistant_api_config';
+
+		const urlInput = document.getElementById('api-url');
+		const keyInput = document.getElementById('api-key');
+		const modelInput = document.getElementById('model');
+		const btnSave = document.getElementById('btn-save');
+		const btnCancel = document.getElementById('btn-cancel');
+		const toast = document.getElementById('toast');
+
+		// Load saved config
+		async function loadConfig() {
+			try {
+				const raw = await eda.sys_Storage.getExtensionUserConfig(STORAGE_KEY);
+				if (raw) {
+					const config = JSON.parse(raw);
+					if (config.apiUrl) urlInput.value = config.apiUrl;
+					if (config.apiKey) keyInput.value = config.apiKey;
+					if (config.model) modelInput.value = config.model;
+				}
+			} catch (err) {
+				console.error('[PDFAssistant] Failed to load config:', err);
+			}
+		}
+
+		// Save config
+		btnSave.addEventListener('click', async () => {
+			const apiUrl = urlInput.value.trim();
+			const apiKey = keyInput.value.trim();
+			const model = modelInput.value.trim();
+
+			if (!apiUrl || !apiKey || !model) {
+				showToast('All fields are required', 'error');
+				return;
+			}
+
+			try {
+				await eda.sys_Storage.setExtensionUserConfig(
+					STORAGE_KEY,
+					JSON.stringify({ apiUrl, apiKey, model })
+				);
+				showToast('Settings saved', 'success');
+			} catch (err) {
+				console.error('[PDFAssistant] Failed to save config:', err);
+				showToast('Failed to save: ' + err.message, 'error');
+			}
+		});
+
+		btnCancel.addEventListener('click', () => {
+			eda.sys_IFrame.closeIFrame('pdf-assistant-settings');
+		});
+
+		function showToast(msg, type) {
+			toast.textContent = msg;
+			toast.className = 'toast show ' + type;
+			setTimeout(() => { toast.className = 'toast'; }, 2000);
+		}
+
+		loadConfig();
+	})();
+	</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-[简体中文](./README.md) | [English](#) | [繁體中文](./README.zh-Hant.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)
+[简体中文](./README.md) | [English](#)
 
 # Datasheet Helper
 

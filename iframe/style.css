@@ -263,8 +263,11 @@ body {
 	border-radius: var(--radius);
 	line-height: 1.6;
 	font-size: 14px;
-	white-space: pre-wrap;
 	word-break: break-word;
+}
+
+.message.user .message-content {
+	white-space: pre-wrap;
 }
 
 .message.user .message-content {
@@ -286,6 +289,101 @@ body {
 
 .message.ai .message-content p:last-child {
 	margin-bottom: 0;
+}
+
+/* Markdown rendering */
+.message.ai .message-content h1,
+.message.ai .message-content h2,
+.message.ai .message-content h3,
+.message.ai .message-content h4,
+.message.ai .message-content h5,
+.message.ai .message-content h6 {
+	font-weight: 600;
+	margin: 12px 0 6px;
+	line-height: 1.4;
+}
+
+.message.ai .message-content h1 { font-size: 1.3em; }
+.message.ai .message-content h2 { font-size: 1.2em; }
+.message.ai .message-content h3 { font-size: 1.1em; }
+
+.message.ai .message-content ul,
+.message.ai .message-content ol {
+	padding-left: 1.5em;
+	margin-bottom: 8px;
+}
+
+.message.ai .message-content li {
+	margin-bottom: 4px;
+}
+
+.message.ai .message-content code {
+	background: rgba(0, 0, 0, 0.06);
+	padding: 2px 5px;
+	border-radius: 4px;
+	font-size: 0.9em;
+	font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+}
+
+.message.ai .message-content pre {
+	background: #1e1e1e;
+	color: #d4d4d4;
+	padding: 12px;
+	border-radius: 8px;
+	overflow-x: auto;
+	margin-bottom: 8px;
+}
+
+.message.ai .message-content pre code {
+	background: transparent;
+	padding: 0;
+	color: inherit;
+	font-size: 0.85em;
+}
+
+.message.ai .message-content table {
+	border-collapse: collapse;
+	width: 100%;
+	margin-bottom: 8px;
+	font-size: 13px;
+}
+
+.message.ai .message-content th,
+.message.ai .message-content td {
+	border: 1px solid var(--border);
+	padding: 6px 10px;
+	text-align: left;
+}
+
+.message.ai .message-content th {
+	background: var(--bg-secondary);
+	font-weight: 600;
+}
+
+.message.ai .message-content blockquote {
+	border-left: 3px solid var(--accent);
+	padding-left: 12px;
+	margin: 8px 0;
+	color: var(--text-secondary);
+}
+
+.message.ai .message-content a {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.message.ai .message-content a:hover {
+	text-decoration: underline;
+}
+
+.message.ai .message-content hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin: 12px 0;
+}
+
+.message.ai .message-content strong {
+	font-weight: 600;
 }
 
 /* Loading indicator */

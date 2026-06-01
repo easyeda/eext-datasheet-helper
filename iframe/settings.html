@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-Hans">
 <head>
-	<title>PDF Assistant Settings</title>
+	<title>PDF 助手设置</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<style>
@@ -91,29 +91,29 @@
 	</style>
 </head>
 <body>
-	<h2>PDF Assistant Settings</h2>
+	<h2>PDF 助手设置</h2>
 
 	<div class="field">
 		<label for="api-url">API URL</label>
 		<input type="text" id="api-url" placeholder="https://api.example.com/v1/chat/completions" />
-		<div class="hint">OpenAI-compatible chat completions endpoint</div>
+		<div class="hint">OpenAI 兼容的聊天补全接口地址</div>
 	</div>
 
 	<div class="field">
 		<label for="api-key">API Key</label>
 		<input type="password" id="api-key" placeholder="sk-..." />
-		<div class="hint">Authentication key for the API</div>
+		<div class="hint">API 认证密钥</div>
 	</div>
 
 	<div class="field">
-		<label for="model">Model</label>
+		<label for="model">模型</label>
 		<input type="text" id="model" placeholder="gpt-4o" />
-		<div class="hint">Model identifier (e.g. gpt-4o, claude-sonnet-4-20250514)</div>
+		<div class="hint">模型标识（如 gpt-4o、claude-sonnet-4-20250514）</div>
 	</div>
 
 	<div class="actions">
-		<button class="btn-primary" id="btn-save">Save</button>
-		<button class="btn-secondary" id="btn-cancel">Cancel</button>
+		<button class="btn-primary" id="btn-save">保存</button>
+		<button class="btn-secondary" id="btn-cancel">取消</button>
 	</div>
 
 	<div class="toast" id="toast"></div>
@@ -153,7 +153,7 @@
 			const model = modelInput.value.trim();
 
 			if (!apiUrl || !apiKey || !model) {
-				showToast('All fields are required', 'error');
+				showToast('所有字段均为必填', 'error');
 				return;
 			}
 
@@ -162,10 +162,10 @@
 					STORAGE_KEY,
 					JSON.stringify({ apiUrl, apiKey, model })
 				);
-				showToast('Settings saved', 'success');
+				showToast('设置已保存', 'success');
 			} catch (err) {
 				console.error('[PDFAssistant] Failed to save config:', err);
-				showToast('Failed to save: ' + err.message, 'error');
+				showToast('保存失败：' + err.message, 'error');
 			}
 		});
 

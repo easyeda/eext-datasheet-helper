@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-Hans">
 <head>
-	<title>PDF Assistant</title>
+	<title>PDF 助手</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="stylesheet" href="/iframe/style.css" />
@@ -10,9 +10,9 @@
 	<div id="app">
 		<!-- Header -->
 		<div class="header">
-			<h1>PDF Assistant</h1>
+			<h1>PDF 助手</h1>
 			<div class="header-actions">
-				<button id="btn-clear" class="btn-icon" title="Clear chat">
+				<button id="btn-clear" class="btn-icon" title="清空对话">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
 				</button>
 			</div>
@@ -23,8 +23,8 @@
 			<div class="upload-icon">
 				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9,15 12,12 15,15"/></svg>
 			</div>
-			<p class="upload-text">Drop PDF here or click to upload</p>
-			<p class="upload-hint">Supports .pdf files</p>
+			<p class="upload-text">拖拽 PDF 到此处或点击上传</p>
+			<p class="upload-hint">支持 .pdf 文件</p>
 			<input type="file" id="file-input" accept=".pdf" hidden />
 		</div>
 
@@ -35,7 +35,7 @@
 				<span id="pdf-name">-</span>
 				<span id="pdf-pages" class="pdf-pages">-</span>
 			</div>
-			<button id="btn-remove-pdf" class="btn-icon btn-small" title="Remove PDF">
+			<button id="btn-remove-pdf" class="btn-icon btn-small" title="移除 PDF">
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 			</button>
 		</div>
@@ -43,24 +43,25 @@
 		<!-- Chat Messages -->
 		<div id="chat-messages" class="chat-messages">
 			<div class="welcome-message">
-				<p>Hello! I'm your PDF Assistant.</p>
-				<p>Upload a PDF file, then ask me anything about its content.</p>
+				<p>你好！我是你的 PDF 助手。</p>
+				<p>上传 PDF 文件后，可以向我提问任何关于文档内容的问题。</p>
 			</div>
 		</div>
 
 		<!-- Input Area -->
 		<div class="input-area">
 			<div class="input-wrapper">
-				<textarea id="user-input" placeholder="Ask about the PDF content..." rows="1" disabled></textarea>
+				<textarea id="user-input" placeholder="询问 PDF 内容..." rows="1" disabled></textarea>
 				<button id="btn-send" class="btn-send" disabled>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
 				</button>
 			</div>
-			<p class="input-hint">Press Enter to send, Shift+Enter for new line</p>
+			<p class="input-hint">按回车发送，Shift+回车换行</p>
 		</div>
 	</div>
 
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
 	<script src="/iframe/app.js"></script>
 </body>
 </html>

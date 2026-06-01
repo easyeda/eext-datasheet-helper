@@ -1,3 +1,4 @@
+/* global pdfjsLib, marked, eda */
 /**
  * PDF Assistant - iframe application
  * Pure JS PDF extraction with layout analysis + AI chat
@@ -7,9 +8,10 @@
 
 	// ===== Config =====
 	const STORAGE_KEY = 'pdf_assistant_api_config';
+	const DATASHEET_STORAGE_KEY = 'pdf_assistant_pending_datasheets';
 	const MAX_CONTEXT_CHARS = 120000;
 
-	let apiConfig = {
+	const apiConfig = {
 		apiUrl: '',
 		apiKey: '',
 		model: '',
@@ -36,8 +38,8 @@
 
 	// ===== PDF.js Setup =====
 	if (typeof pdfjsLib !== 'undefined') {
-		pdfjsLib.GlobalWorkerOptions.workerSrc =
-			'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+		pdfjsLib.GlobalWorkerOptions.workerSrc
+			= 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 	}
 
 	// ===== Event Listeners =====
@@ -84,37 +86,26 @@
 
 	async function processPDFFile(file) {
 		if (typeof pdfjsLib === 'undefined') {
-			showStatus('PDF.js library failed to load. Check your network.', 'error');
+			showStatus('PDF.js 库加载失败，请检查网络连接。', 'error');
 			return;
 		}
 
 		isProcessing = true;
 		updateInputState();
-		showStatus('Extracting PDF with layout analysis...', '');
+		showStatus('正在提取 PDF 并进行版面分析...', '');
 
 		try {
 			const arrayBuffer = await file.arrayBuffer();
-			const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-			const totalPages = pdf.numPages;
-			let fullText = '';
+			const result = await extractPdfText(arrayBuffer, file.name);
 
-			for (let i = 1; i <= totalPages; i++) {
-				const page = await pdf.getPage(i);
-				const pageText = await extractPageStructured(page, i, totalPages);
-				if (pageText.trim()) {
-					fullText += `\n\n=== Page ${i} of ${totalPages} ===\n${pageText}`;
-				}
-				showStatus(`Extracting... (${i}/${totalPages})`, '');
-			}
-
-			pdfContent = fullText.trim();
+			pdfContent = result.text;
 			pdfFileName = file.name;
-			pdfPageCount = totalPages;
+			pdfPageCount = result.pages;
 
 			uploadArea.classList.add('hidden');
 			pdfInfo.classList.remove('hidden');
 			pdfName.textContent = pdfFileName;
-			pdfPages.textContent = `(${pdfPageCount} pages, ${formatSize(pdfContent.length)})`;
+			pdfPages.textContent = `(${pdfPageCount} 页, ${formatSize(pdfContent.length)})`;
 			userInput.disabled = false;
 			btnSend.disabled = false;
 			userInput.focus();
@@ -122,18 +113,19 @@
 			updateInputState();
 
 			removeStatus();
-			addSystemMessage(`PDF loaded: ${pdfFileName} (${pdfPageCount} pages)`);
+			addSystemMessage(`PDF 已加载：${pdfFileName}（${pdfPageCount} 页）`);
 			chatHistory = [];
-		} catch (err) {
+		}
+		catch (err) {
 			console.error('[PDFAssistant] Extraction failed:', err);
 			isProcessing = false;
 			updateInputState();
-			showStatus('Failed to extract PDF: ' + err.message, 'error');
+			showStatus(`PDF 提取失败：${err.message}`, 'error');
 		}
 	}
 
 	// ===== Core: Structured Page Extraction =====
-	async function extractPageStructured(page, pageNum, totalPages) {
+	async function extractPageStructured(page, _pageNum, _totalPages) {
 		const viewport = page.getViewport({ scale: 1.0 });
 		const textContent = await page.getTextContent();
 
@@ -144,7 +136,7 @@
 		// Build text items with accurate positions
 		const items = textContent.items
 			.filter(item => item.str && item.str.trim())
-			.map(item => {
+			.map((item) => {
 				const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
 				const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
 				return {
@@ -158,7 +150,8 @@
 				};
 			});
 
-		if (items.length === 0) return '';
+		if (items.length === 0)
+			return '';
 
 		// Step 1: Detect font sizes for header detection
 		const fontSizes = items.map(it => it.fontSize).filter(s => s > 0);
@@ -178,13 +171,14 @@
 
 		// Render tables
 		for (const table of tables) {
-			output += renderTable(table) + '\n\n';
+			output += `${renderTable(table)}\n\n`;
 		}
 
 		// Render text (with column awareness)
 		if (columnResult.isMultiColumn && columnResult.columns.length > 1) {
 			output += renderColumns(columnResult, bodyFontSize);
-		} else {
+		}
+		else {
 			output += renderSingleColumn(remainingLines, bodyFontSize);
 		}
 
@@ -206,7 +200,8 @@
 			if (!currentLine || Math.abs(item.y - currentLine.y) > 3) {
 				currentLine = { y: item.y, items: [item] };
 				lines.push(currentLine);
-			} else {
+			}
+			else {
 				currentLine.items.push(item);
 				// Update line Y to average
 				currentLine.y = (currentLine.y * (currentLine.items.length - 1) + item.y) / currentLine.items.length;
@@ -222,11 +217,12 @@
 	}
 
 	// ===== Table Detection =====
-	function detectTables(lines, allItems) {
+	function detectTables(lines, _allItems) {
 		const tables = [];
 		const usedLineIndices = new Set();
 
-		if (lines.length < 3) return { tables, remainingLines: lines };
+		if (lines.length < 3)
+			return { tables, remainingLines: lines };
 
 		// Find potential table regions by detecting grid patterns
 		// Look for lines where multiple items share similar X positions
@@ -242,7 +238,7 @@
 		const threshold = Math.max(3, lines.length * 0.3);
 		const columnXs = Object.entries(xPositions)
 			.filter(([, count]) => count >= threshold)
-			.map(([x]) => parseInt(x))
+			.map(([x]) => Number.parseInt(x))
 			.sort((a, b) => a - b);
 
 		if (columnXs.length < 2) {
@@ -259,9 +255,11 @@
 			const matchCount = columnXs.filter(cx => lineXs.some(lx => Math.abs(lx - cx) < 10)).length;
 
 			if (matchCount >= Math.min(2, columnXs.length)) {
-				if (tableStart === -1) tableStart = i;
+				if (tableStart === -1)
+					tableStart = i;
 				tableLines.push({ index: i, line });
-			} else {
+			}
+			else {
 				if (tableLines.length >= 3) {
 					// Found a table region
 					const table = buildTable(tableLines, columnXs);
@@ -297,7 +295,7 @@
 		const grid = [];
 
 		for (const { line } of tableLines) {
-			const row = new Array(columnXs.length).fill('');
+			const row = Array.from({ length: columnXs.length }, () => '');
 			for (const item of line.items) {
 				// Find nearest column
 				let nearestCol = 0;
@@ -319,17 +317,19 @@
 			}
 		}
 
-		if (grid.length < 2) return null;
+		if (grid.length < 2)
+			return null;
 
 		return grid;
 	}
 
 	function renderTable(grid) {
-		if (!grid || grid.length === 0) return '';
+		if (!grid || grid.length === 0)
+			return '';
 
 		// Calculate column widths
 		const numCols = Math.max(...grid.map(row => row.length));
-		const colWidths = new Array(numCols).fill(3);
+		const colWidths = Array.from({ length: numCols }, () => 3);
 
 		for (const row of grid) {
 			for (let i = 0; i < row.length; i++) {
@@ -337,21 +337,22 @@
 			}
 		}
 
-		const sep = '+' + colWidths.map(w => '-'.repeat(w)).join('+') + '+';
+		const sep = `+${colWidths.map(w => '-'.repeat(w)).join('+')}+`;
 
 		const renderRow = (cells) => {
 			const parts = [];
 			for (let i = 0; i < numCols; i++) {
 				const cell = (cells[i] || '').substring(0, colWidths[i] - 2);
-				parts.push(' ' + cell.padEnd(colWidths[i] - 2) + ' ');
+				parts.push(` ${cell.padEnd(colWidths[i] - 2)} `);
 			}
-			return '|' + parts.join('|') + '|';
+			return `|${parts.join('|')}|`;
 		};
 
 		const lines = [sep];
 		for (let i = 0; i < grid.length; i++) {
 			lines.push(renderRow(grid[i]));
-			if (i === 0) lines.push(sep); // Header separator
+			if (i === 0)
+				lines.push(sep); // Header separator
 		}
 		lines.push(sep);
 
@@ -380,11 +381,12 @@
 		const pageWidth = Math.max(...xStarts) + 50;
 		const binWidth = 5;
 		const numBins = Math.ceil(pageWidth / binWidth);
-		const histogram = new Array(numBins).fill(0);
+		const histogram = Array.from({ length: numBins }, () => 0);
 
 		for (const x of xStarts) {
 			const bin = Math.floor(x / binWidth);
-			if (bin >= 0 && bin < numBins) histogram[bin]++;
+			if (bin >= 0 && bin < numBins)
+				histogram[bin]++;
 		}
 
 		// Find significant gaps
@@ -394,8 +396,10 @@
 
 		for (let i = 0; i < numBins; i++) {
 			if (histogram[i] <= threshold) {
-				if (gapStart === -1) gapStart = i;
-			} else {
+				if (gapStart === -1)
+					gapStart = i;
+			}
+			else {
 				if (gapStart !== -1) {
 					const gapWidth = (i - gapStart) * binWidth;
 					if (gapWidth > 30) {
@@ -447,7 +451,7 @@
 
 		for (let colIdx = 0; colIdx < columnResult.columns.length; colIdx++) {
 			const colLines = columnResult.columns[colIdx];
-			output += `[Column ${colIdx + 1}]\n`;
+			output += `[第 ${colIdx + 1} 列]\n`;
 			output += renderSingleColumn(colLines, bodyFontSize);
 			output += '\n\n';
 		}
@@ -472,7 +476,7 @@
 			// Detect headers (larger font)
 			const maxFontSize = Math.max(...line.items.map(it => it.fontSize));
 			if (maxFontSize > bodyFontSize * 1.25) {
-				lineText += '[Section: ';
+				lineText += '[章节: ';
 			}
 
 			for (let i = 0; i < line.items.length; i++) {
@@ -481,7 +485,8 @@
 					const gap = item.x - prevEndX;
 					if (gap > 20) {
 						lineText += '    '; // Large gap
-					} else if (gap > 3) {
+					}
+					else if (gap > 3) {
 						lineText += ' ';
 					}
 				}
@@ -493,7 +498,7 @@
 				lineText += ']';
 			}
 
-			output += lineText + '\n';
+			output += `${lineText}\n`;
 			prevY = line.y;
 		}
 
@@ -502,7 +507,8 @@
 
 	// ===== Utility =====
 	function mode(arr) {
-		if (!arr.length) return 12;
+		if (!arr.length)
+			return 12;
 		const counts = {};
 		for (const v of arr) {
 			const key = Math.round(v);
@@ -513,7 +519,7 @@
 		for (const [val, count] of Object.entries(counts)) {
 			if (count > maxCount) {
 				maxCount = count;
-				modeVal = parseFloat(val);
+				modeVal = Number.parseFloat(val);
 			}
 		}
 		return modeVal;
@@ -535,7 +541,8 @@
 	// ===== Chat Functions =====
 	async function sendMessage() {
 		const text = userInput.value.trim();
-		if (!text || isProcessing || !pdfContent) return;
+		if (!text || isProcessing || !pdfContent)
+			return;
 
 		addMessage('user', text);
 		userInput.value = '';
@@ -543,30 +550,39 @@
 
 		isProcessing = true;
 		updateInputState();
-		const loadingEl = addLoadingMessage();
+		const { contentDiv, update } = addStreamingMessage();
 
+		let fullText = '';
 		try {
-			const response = await callAIAPI(text);
-			loadingEl.remove();
-			addMessage('ai', response);
+			await callAIAPI(text, (chunk) => {
+				fullText += chunk;
+				update(fullText);
+			});
 
 			chatHistory.push({ role: 'user', content: text });
-			chatHistory.push({ role: 'assistant', content: response });
+			chatHistory.push({ role: 'assistant', content: fullText });
 
 			if (chatHistory.length > 40) {
 				chatHistory = chatHistory.slice(-40);
 			}
-		} catch (err) {
-			loadingEl.remove();
+		}
+		catch (err) {
 			console.error('[PDFAssistant] API call failed:', err);
-			addMessage('error', 'Failed to get AI response: ' + err.message);
-		} finally {
+			if (fullText) {
+				update(`${fullText}\n\n**错误：**${err.message}`);
+			}
+			else {
+				contentDiv.parentElement.remove();
+				addMessage('error', `获取 AI 响应失败：${err.message}`);
+			}
+		}
+		finally {
 			isProcessing = false;
 			updateInputState();
 		}
 	}
 
-	async function callAIAPI(question) {
+	async function callAIAPI(question, onChunk) {
 		let systemContent = `You are a PDF document analysis assistant. You have been given the extracted text content of a PDF document. Your job is to:
 1. Understand the document's structure and content
 2. Answer questions about the document accurately
@@ -577,11 +593,12 @@ When answering:
 - Be precise and cite page numbers when applicable
 - If the PDF contains technical data (datasheets, specifications), present the data clearly
 - If information is not found in the document, say so explicitly
-- Use the same language as the user's question`;
+- Use the same language as the user's question
+- Use Markdown formatting for better readability`;
 
 		let contextContent = pdfContent;
 		if (contextContent.length > MAX_CONTEXT_CHARS) {
-			contextContent = contextContent.substring(0, MAX_CONTEXT_CHARS) + '\n\n[Content truncated due to length...]';
+			contextContent = `${contextContent.substring(0, MAX_CONTEXT_CHARS)}\n\n[Content truncated due to length...]`;
 		}
 
 		systemContent += `\n\n--- PDF Content ---\n${contextContent}`;
@@ -589,44 +606,77 @@ When answering:
 		const messages = [
 			{ role: 'system', content: systemContent },
 			...chatHistory,
-			{ role: 'user', content: question }
+			{ role: 'user', content: question },
 		];
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			throw new Error('API not configured. Go to PDF Assistant > Settings to set API URL, Key, and Model.');
+			throw new Error('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。');
 		}
 
 		const response = await fetch(apiConfig.apiUrl, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${apiConfig.apiKey}`
+				'Authorization': `Bearer ${apiConfig.apiKey}`,
 			},
 			body: JSON.stringify({
 				model: apiConfig.model,
-				messages: messages,
-				stream: false
-			})
+				messages,
+				stream: true,
+			}),
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text().catch(() => 'Unknown error');
-			throw new Error(`API error ${response.status}: ${errorText}`);
+			throw new Error(`API 错误 ${response.status}：${errorText}`);
 		}
 
-		const data = await response.json();
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
 
-		if (data.choices && data.choices[0] && data.choices[0].message) {
-			return data.choices[0].message.content;
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done)
+				break;
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop();
+
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (!trimmed || !trimmed.startsWith('data: '))
+					continue;
+				const data = trimmed.slice(6);
+				if (data === '[DONE]')
+					return;
+
+				try {
+					const parsed = JSON.parse(data);
+					const delta = parsed.choices?.[0]?.delta?.content;
+					if (delta)
+						onChunk(delta);
+				}
+				catch {
+					// skip malformed JSON lines
+				}
+			}
 		}
-
-		throw new Error('Invalid API response format');
 	}
 
 	// ===== UI Helpers =====
+	function renderMarkdown(text) {
+		if (typeof marked !== 'undefined') {
+			return marked.parse(text, { gfm: true, breaks: true });
+		}
+		return text.replace(/</g, '&lt;').replace(/\n/g, '<br>');
+	}
+
 	function addMessage(type, content) {
 		const welcome = chatMessages.querySelector('.welcome-message');
-		if (welcome) welcome.remove();
+		if (welcome)
+			welcome.remove();
 
 		const div = document.createElement('div');
 		div.className = `message ${type}`;
@@ -637,7 +687,12 @@ When answering:
 
 		const contentDiv = document.createElement('div');
 		contentDiv.className = 'message-content';
-		contentDiv.textContent = content;
+		if (type === 'ai') {
+			contentDiv.innerHTML = renderMarkdown(content);
+		}
+		else {
+			contentDiv.textContent = content;
+		}
 
 		div.appendChild(avatar);
 		div.appendChild(contentDiv);
@@ -645,17 +700,13 @@ When answering:
 		scrollToBottom();
 	}
 
-	function addSystemMessage(text) {
-		const div = document.createElement('div');
-		div.className = 'status-message success';
-		div.textContent = text;
-		chatMessages.appendChild(div);
-		scrollToBottom();
-	}
+	function addStreamingMessage() {
+		const welcome = chatMessages.querySelector('.welcome-message');
+		if (welcome)
+			welcome.remove();
 
-	function addLoadingMessage() {
 		const div = document.createElement('div');
-		div.className = 'message ai loading';
+		div.className = 'message ai';
 
 		const avatar = document.createElement('div');
 		avatar.className = 'message-avatar';
@@ -669,7 +720,22 @@ When answering:
 		div.appendChild(contentDiv);
 		chatMessages.appendChild(div);
 		scrollToBottom();
-		return div;
+
+		return {
+			contentDiv,
+			update(text) {
+				contentDiv.innerHTML = renderMarkdown(text);
+				scrollToBottom();
+			},
+		};
+	}
+
+	function addSystemMessage(text) {
+		const div = document.createElement('div');
+		div.className = 'status-message success';
+		div.textContent = text;
+		chatMessages.appendChild(div);
+		scrollToBottom();
 	}
 
 	function showStatus(text, type) {
@@ -684,19 +750,21 @@ When answering:
 
 	function removeStatus() {
 		const existing = document.getElementById('status-msg');
-		if (existing) existing.remove();
+		if (existing)
+			existing.remove();
 	}
 
 	function clearChat() {
 		chatHistory = [];
 		chatMessages.innerHTML = '';
 		if (pdfContent) {
-			addSystemMessage(`PDF loaded: ${pdfFileName} (${pdfPageCount} pages)`);
-		} else {
+			addSystemMessage(`PDF 已加载：${pdfFileName}（${pdfPageCount} 页）`);
+		}
+		else {
 			chatMessages.innerHTML = `
 				<div class="welcome-message">
-					<p>Hello! I'm your PDF Assistant.</p>
-					<p>Upload a PDF file, then ask me anything about its content.</p>
+					<p>你好！我是你的 PDF 助手。</p>
+					<p>上传 PDF 文件后，可以向我提问任何关于文档内容的问题。</p>
 				</div>`;
 		}
 	}
@@ -709,7 +777,7 @@ When answering:
 
 	function autoResize() {
 		userInput.style.height = 'auto';
-		userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+		userInput.style.height = `${Math.min(userInput.scrollHeight, 120)}px`;
 	}
 
 	function updateInputState() {
@@ -718,12 +786,98 @@ When answering:
 	}
 
 	function formatSize(chars) {
-		if (chars < 1024) return chars + ' chars';
-		if (chars < 1024 * 1024) return (chars / 1024).toFixed(1) + 'K chars';
-		return (chars / (1024 * 1024)).toFixed(1) + 'M chars';
+		if (chars < 1024)
+			return `${chars} 字符`;
+		if (chars < 1024 * 1024)
+			return `${(chars / 1024).toFixed(1)}K 字符`;
+		return `${(chars / (1024 * 1024)).toFixed(1)}M 字符`;
 	}
 
-	// ===== Init: Load API config from storage =====
+	// ===== URL-based PDF Loading =====
+	async function loadPdfFromUrl(url, name) {
+		if (typeof pdfjsLib === 'undefined') {
+			throw new TypeError('PDF.js 库加载失败，请检查网络连接。');
+		}
+
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
+
+		const arrayBuffer = await response.arrayBuffer();
+		return await extractPdfText(arrayBuffer, name);
+	}
+
+	async function extractPdfText(arrayBuffer, name) {
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		const totalPages = pdf.numPages;
+		let fullText = '';
+
+		for (let i = 1; i <= totalPages; i++) {
+			const page = await pdf.getPage(i);
+			const pageText = await extractPageStructured(page, i, totalPages);
+			if (pageText.trim()) {
+				fullText += `\n\n=== 第 ${i} 页 / 共 ${totalPages} 页 ===\n${pageText}`;
+			}
+			showStatus(`正在提取 ${name}... (${i}/${totalPages})`, '');
+		}
+
+		return { text: fullText.trim(), pages: totalPages };
+	}
+
+	async function loadDatasheetsFromSelection(datasheets) {
+		isProcessing = true;
+		updateInputState();
+
+		let allText = '';
+		let totalPages = 0;
+		const loadedNames = [];
+
+		for (let i = 0; i < datasheets.length; i++) {
+			const ds = datasheets[i];
+			showStatus(`正在加载 (${i + 1}/${datasheets.length}): ${ds.name}`, '');
+
+			try {
+				const result = await loadPdfFromUrl(ds.url, ds.name);
+				if (result.text) {
+					allText += `\n\n========== 数据手册: ${ds.name} ==========\n${result.text}`;
+					totalPages += result.pages;
+					loadedNames.push(ds.name);
+				}
+			}
+			catch (err) {
+				console.warn(`[PDFAssistant] Failed to load datasheet for ${ds.name}:`, err);
+				allText += `\n\n========== 数据手册: ${ds.name} ==========\n[加载失败: ${err.message}]`;
+			}
+		}
+
+		if (!loadedNames.length) {
+			isProcessing = false;
+			updateInputState();
+			showStatus('所有数据手册加载失败。', 'error');
+			return;
+		}
+
+		pdfContent = allText.trim();
+		pdfFileName = `${loadedNames.join(', ')} Datasheets`;
+		pdfPageCount = totalPages;
+
+		uploadArea.classList.add('hidden');
+		pdfInfo.classList.remove('hidden');
+		pdfName.textContent = pdfFileName;
+		pdfPages.textContent = `(${pdfPageCount} 页, ${formatSize(pdfContent.length)})`;
+		userInput.disabled = false;
+		btnSend.disabled = false;
+		userInput.focus();
+		isProcessing = false;
+		updateInputState();
+
+		removeStatus();
+		addSystemMessage(`已加载 ${loadedNames.length} 个数据手册：${loadedNames.join(', ')}（共 ${pdfPageCount} 页）`);
+		chatHistory = [];
+	}
+
+	// ===== Init: Load API config and check pending datasheets =====
 	async function init() {
 		try {
 			const raw = await eda.sys_Storage.getExtensionUserConfig(STORAGE_KEY);
@@ -733,12 +887,29 @@ When answering:
 				apiConfig.apiKey = config.apiKey || '';
 				apiConfig.model = config.model || '';
 			}
-		} catch (err) {
+		}
+		catch (err) {
 			console.warn('[PDFAssistant] Failed to load API config:', err);
 		}
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			addSystemMessage('API not configured. Go to PDF Assistant > Settings to set API URL, Key, and Model.');
+			addSystemMessage('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。');
+		}
+
+		// Check for pending datasheets from selection
+		try {
+			const pendingRaw = await eda.sys_Storage.getExtensionUserConfig(DATASHEET_STORAGE_KEY);
+			if (pendingRaw) {
+				const datasheets = JSON.parse(pendingRaw);
+				// Clear the pending data immediately
+				await eda.sys_Storage.setExtensionUserConfig(DATASHEET_STORAGE_KEY, '');
+				if (Array.isArray(datasheets) && datasheets.length > 0) {
+					await loadDatasheetsFromSelection(datasheets);
+				}
+			}
+		}
+		catch (err) {
+			console.warn('[PDFAssistant] Failed to load pending datasheets:', err);
 		}
 	}
 

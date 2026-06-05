@@ -91,29 +91,29 @@
 	</style>
 </head>
 <body>
-	<h2>PDF 助手设置</h2>
+	<h2 id="settings-title"></h2>
 
 	<div class="field">
 		<label for="api-url">API URL</label>
 		<input type="text" id="api-url" placeholder="https://api.example.com/v1/chat/completions" />
-		<div class="hint">OpenAI 兼容的聊天补全接口地址</div>
+		<div class="hint" id="hint-apiurl"></div>
 	</div>
 
 	<div class="field">
 		<label for="api-key">API Key</label>
 		<input type="password" id="api-key" placeholder="sk-..." />
-		<div class="hint">API 认证密钥</div>
+		<div class="hint" id="hint-apikey"></div>
 	</div>
 
 	<div class="field">
-		<label for="model">模型</label>
+		<label for="model" id="label-model"></label>
 		<input type="text" id="model" placeholder="gpt-4o" />
-		<div class="hint">模型标识（如 gpt-4o、claude-sonnet-4-20250514）</div>
+		<div class="hint" id="hint-model"></div>
 	</div>
 
 	<div class="actions">
-		<button class="btn-primary" id="btn-save">保存</button>
-		<button class="btn-secondary" id="btn-cancel">取消</button>
+		<button class="btn-primary" id="btn-save"></button>
+		<button class="btn-secondary" id="btn-cancel"></button>
 	</div>
 
 	<div class="toast" id="toast"></div>
@@ -121,6 +121,25 @@
 	<script>
 	(function () {
 		'use strict';
+
+		var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+		function t(tag) {
+			if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag);
+			return tag;
+		}
+		function tArgs(tag, ...args) {
+			if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
+			return tag;
+		}
+
+		document.title = t('pdfassistant.settings.title');
+		document.getElementById('settings-title').textContent = t('pdfassistant.settings.title');
+		document.getElementById('hint-apiurl').textContent = t('pdfassistant.settings.apiurl.hint');
+		document.getElementById('hint-apikey').textContent = t('pdfassistant.settings.apikey.hint');
+		document.getElementById('label-model').textContent = t('pdfassistant.settings.model');
+		document.getElementById('hint-model').textContent = t('pdfassistant.settings.model.hint');
+		document.getElementById('btn-save').textContent = t('pdfassistant.settings.save');
+		document.getElementById('btn-cancel').textContent = t('pdfassistant.settings.cancel');
 
 		const STORAGE_KEY = 'pdf_assistant_api_config';
 
@@ -153,7 +172,7 @@
 			const model = modelInput.value.trim();
 
 			if (!apiUrl || !apiKey || !model) {
-				showToast('所有字段均为必填', 'error');
+				showToast(t('pdfassistant.settings.all.required'), 'error');
 				return;
 			}
 
@@ -162,10 +181,10 @@
 					STORAGE_KEY,
 					JSON.stringify({ apiUrl, apiKey, model })
 				);
-				showToast('设置已保存', 'success');
+				showToast(t('pdfassistant.settings.saved'), 'success');
 			} catch (err) {
 				console.error('[PDFAssistant] Failed to save config:', err);
-				showToast('保存失败：' + err.message, 'error');
+				showToast(tArgs('pdfassistant.settings.save.failed', err.message), 'error');
 			}
 		});
 

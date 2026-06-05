@@ -6,6 +6,17 @@
 (function () {
 	'use strict';
 
+	// ===== i18n =====
+	var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+	function t(tag) {
+		if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag);
+		return tag;
+	}
+	function tArgs(tag, ...args) {
+		if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
+		return tag;
+	}
+
 	// ===== Config =====
 	const STORAGE_KEY = 'pdf_assistant_api_config';
 	const DATASHEET_STORAGE_KEY = 'pdf_assistant_pending_datasheets';
@@ -86,13 +97,13 @@
 
 	async function processPDFFile(file) {
 		if (typeof pdfjsLib === 'undefined') {
-			showStatus('PDF.js 库加载失败，请检查网络连接。', 'error');
+			showStatus(t('pdfassistant.error.pdfjs.load'), 'error');
 			return;
 		}
 
 		isProcessing = true;
 		updateInputState();
-		showStatus('正在提取 PDF 并进行版面分析...', '');
+		showStatus(t('pdfassistant.status.extracting'), '');
 
 		try {
 			const arrayBuffer = await file.arrayBuffer();
@@ -105,7 +116,7 @@
 			uploadArea.classList.add('hidden');
 			pdfInfo.classList.remove('hidden');
 			pdfName.textContent = pdfFileName;
-			pdfPages.textContent = `(${pdfPageCount} 页, ${formatSize(pdfContent.length)})`;
+			pdfPages.textContent = tArgs('pdfassistant.pdf.pages', pdfPageCount, formatSize(pdfContent.length));
 			userInput.disabled = false;
 			btnSend.disabled = false;
 			userInput.focus();
@@ -113,14 +124,14 @@
 			updateInputState();
 
 			removeStatus();
-			addSystemMessage(`PDF 已加载：${pdfFileName}（${pdfPageCount} 页）`);
+			addSystemMessage(tArgs('pdfassistant.pdf.loaded', pdfFileName, pdfPageCount));
 			chatHistory = [];
 		}
 		catch (err) {
 			console.error('[PDFAssistant] Extraction failed:', err);
 			isProcessing = false;
 			updateInputState();
-			showStatus(`PDF 提取失败：${err.message}`, 'error');
+			showStatus(tArgs('pdfassistant.error.extract.failed', err.message), 'error');
 		}
 	}
 
@@ -451,7 +462,7 @@
 
 		for (let colIdx = 0; colIdx < columnResult.columns.length; colIdx++) {
 			const colLines = columnResult.columns[colIdx];
-			output += `[第 ${colIdx + 1} 列]\n`;
+			output += `${tArgs('pdfassistant.column.marker', colIdx + 1)}\n`;
 			output += renderSingleColumn(colLines, bodyFontSize);
 			output += '\n\n';
 		}
@@ -476,7 +487,7 @@
 			// Detect headers (larger font)
 			const maxFontSize = Math.max(...line.items.map(it => it.fontSize));
 			if (maxFontSize > bodyFontSize * 1.25) {
-				lineText += '[章节: ';
+				lineText += t('pdfassistant.section.marker');
 			}
 
 			for (let i = 0; i < line.items.length; i++) {
@@ -569,11 +580,11 @@
 		catch (err) {
 			console.error('[PDFAssistant] API call failed:', err);
 			if (fullText) {
-				update(`${fullText}\n\n**错误：**${err.message}`);
+				update(`${fullText}\n\n**${t('pdfassistant.error.prefix')}**${err.message}`);
 			}
 			else {
 				contentDiv.parentElement.remove();
-				addMessage('error', `获取 AI 响应失败：${err.message}`);
+				addMessage('error', tArgs('pdfassistant.error.ai.failed', err.message));
 			}
 		}
 		finally {
@@ -610,7 +621,7 @@ When answering:
 		];
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			throw new Error('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。');
+			throw new Error(t('pdfassistant.error.api.not.configured'));
 		}
 
 		const response = await fetch(apiConfig.apiUrl, {
@@ -628,7 +639,7 @@ When answering:
 
 		if (!response.ok) {
 			const errorText = await response.text().catch(() => 'Unknown error');
-			throw new Error(`API 错误 ${response.status}：${errorText}`);
+			throw new Error(tArgs('pdfassistant.error.api', response.status, errorText));
 		}
 
 		const reader = response.body.getReader();
@@ -758,13 +769,13 @@ When answering:
 		chatHistory = [];
 		chatMessages.innerHTML = '';
 		if (pdfContent) {
-			addSystemMessage(`PDF 已加载：${pdfFileName}（${pdfPageCount} 页）`);
+			addSystemMessage(tArgs('pdfassistant.pdf.loaded', pdfFileName, pdfPageCount));
 		}
 		else {
 			chatMessages.innerHTML = `
 				<div class="welcome-message">
-					<p>你好！我是你的 PDF 助手。</p>
-					<p>上传 PDF 文件后，可以向我提问任何关于文档内容的问题。</p>
+					<p>${t('pdfassistant.welcome.1')}</p>
+					<p>${t('pdfassistant.welcome.2')}</p>
 				</div>`;
 		}
 	}
@@ -787,16 +798,16 @@ When answering:
 
 	function formatSize(chars) {
 		if (chars < 1024)
-			return `${chars} 字符`;
+			return `${chars}${t('pdfassistant.unit.chars')}`;
 		if (chars < 1024 * 1024)
-			return `${(chars / 1024).toFixed(1)}K 字符`;
-		return `${(chars / (1024 * 1024)).toFixed(1)}M 字符`;
+			return `${(chars / 1024).toFixed(1)}${t('pdfassistant.unit.kchars')}`;
+		return `${(chars / (1024 * 1024)).toFixed(1)}${t('pdfassistant.unit.mchars')}`;
 	}
 
 	// ===== URL-based PDF Loading =====
 	async function loadPdfFromUrl(url, name) {
 		if (typeof pdfjsLib === 'undefined') {
-			throw new TypeError('PDF.js 库加载失败，请检查网络连接。');
+			throw new TypeError(t('pdfassistant.error.pdfjs.load'));
 		}
 
 		const response = await fetch(url);
@@ -817,9 +828,9 @@ When answering:
 			const page = await pdf.getPage(i);
 			const pageText = await extractPageStructured(page, i, totalPages);
 			if (pageText.trim()) {
-				fullText += `\n\n=== 第 ${i} 页 / 共 ${totalPages} 页 ===\n${pageText}`;
+				fullText += `\n\n${tArgs('pdfassistant.page.marker', i, totalPages)}\n${pageText}`;
 			}
-			showStatus(`正在提取 ${name}... (${i}/${totalPages})`, '');
+			showStatus(tArgs('pdfassistant.status.loading', i, totalPages, name), '');
 		}
 
 		return { text: fullText.trim(), pages: totalPages };
@@ -835,26 +846,26 @@ When answering:
 
 		for (let i = 0; i < datasheets.length; i++) {
 			const ds = datasheets[i];
-			showStatus(`正在加载 (${i + 1}/${datasheets.length}): ${ds.name}`, '');
+			showStatus(tArgs('pdfassistant.status.loading', i + 1, datasheets.length, ds.name), '');
 
 			try {
 				const result = await loadPdfFromUrl(ds.url, ds.name);
 				if (result.text) {
-					allText += `\n\n========== 数据手册: ${ds.name} ==========\n${result.text}`;
+					allText += `\n\n========== ${tArgs('pdfassistant.datasheet.label', ds.name)} ==========\n${result.text}`;
 					totalPages += result.pages;
 					loadedNames.push(ds.name);
 				}
 			}
 			catch (err) {
 				console.warn(`[PDFAssistant] Failed to load datasheet for ${ds.name}:`, err);
-				allText += `\n\n========== 数据手册: ${ds.name} ==========\n[加载失败: ${err.message}]`;
+				allText += `\n\n========== ${tArgs('pdfassistant.datasheet.label', ds.name)} ==========\n${tArgs('pdfassistant.datasheet.load.failed', err.message)}`;
 			}
 		}
 
 		if (!loadedNames.length) {
 			isProcessing = false;
 			updateInputState();
-			showStatus('所有数据手册加载失败。', 'error');
+			showStatus(t('pdfassistant.error.all.datasheets.failed'), 'error');
 			return;
 		}
 
@@ -865,7 +876,7 @@ When answering:
 		uploadArea.classList.add('hidden');
 		pdfInfo.classList.remove('hidden');
 		pdfName.textContent = pdfFileName;
-		pdfPages.textContent = `(${pdfPageCount} 页, ${formatSize(pdfContent.length)})`;
+		pdfPages.textContent = tArgs('pdfassistant.pdf.pages', pdfPageCount, formatSize(pdfContent.length));
 		userInput.disabled = false;
 		btnSend.disabled = false;
 		userInput.focus();
@@ -873,7 +884,7 @@ When answering:
 		updateInputState();
 
 		removeStatus();
-		addSystemMessage(`已加载 ${loadedNames.length} 个数据手册：${loadedNames.join(', ')}（共 ${pdfPageCount} 页）`);
+		addSystemMessage(tArgs('pdfassistant.datasheets.loaded', loadedNames.length, loadedNames.join(', '), pdfPageCount));
 		chatHistory = [];
 	}
 
@@ -893,7 +904,7 @@ When answering:
 		}
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			addSystemMessage('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。');
+			addSystemMessage(t('pdfassistant.error.api.not.configured'));
 		}
 
 		// Check for pending datasheets from selection

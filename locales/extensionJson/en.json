@@ -2,5 +2,10 @@
 	"PDF Assistant": "PDF Assistant",
 	"Open PDF Assistant": "Open PDF Assistant",
 	"Open Datasheet from Selection": "Open Datasheet from Selection",
-	"Settings": "Settings"
+	"Settings": "Settings",
+	"数据手册助手": "Datasheet Assistant",
+	"基于AI驱动的数据手册助手，帮助快速分析数据手册": "AI-driven datasheet assistant for quick analysis of datasheets",
+	"PDF": "PDF",
+	"AI": "AI",
+	"Assistant": "Assistant"
 }

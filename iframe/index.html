@@ -72,16 +72,16 @@
 		if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
 		return tag;
 	}
-	document.title = t('pdfassistant.page.title');
-	document.getElementById('page-title').textContent = t('pdfassistant.page.title');
-	document.getElementById('btn-clear').title = t('pdfassistant.clear.chat');
-	document.getElementById('upload-text').textContent = t('pdfassistant.upload.text');
-	document.getElementById('upload-hint').textContent = t('pdfassistant.upload.hint');
-	document.getElementById('btn-remove-pdf').title = t('pdfassistant.remove.pdf');
-	document.getElementById('welcome-1').textContent = t('pdfassistant.welcome.1');
-	document.getElementById('welcome-2').textContent = t('pdfassistant.welcome.2');
-	document.getElementById('user-input').placeholder = t('pdfassistant.input.placeholder');
-	document.getElementById('input-hint').textContent = t('pdfassistant.input.hint');
+	document.title = t('PDF 助手');
+	document.getElementById('page-title').textContent = t('PDF 助手');
+	document.getElementById('btn-clear').title = t('清空对话');
+	document.getElementById('upload-text').textContent = t('拖拽 PDF 到此处或点击上传');
+	document.getElementById('upload-hint').textContent = t('支持 .pdf 文件');
+	document.getElementById('btn-remove-pdf').title = t('移除 PDF');
+	document.getElementById('welcome-1').textContent = t('你好！我是你的 PDF 助手。');
+	document.getElementById('welcome-2').textContent = t('上传 PDF 文件后，可以向我提问任何关于文档内容的问题。');
+	document.getElementById('user-input').placeholder = t('询问 PDF 内容...');
+	document.getElementById('input-hint').textContent = t('按回车发送，Shift+回车换行');
 	</script>
 	<script src="/iframe/app.js"></script>
 </body>

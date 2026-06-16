@@ -1,4 +1,5 @@
 /* global pdfjsLib, marked, eda */
+/* eslint-disable no-template-curly-in-string */
 /**
  * PDF Assistant - iframe application
  * Pure JS PDF extraction with layout analysis + AI chat
@@ -7,13 +8,15 @@
 	'use strict';
 
 	// ===== i18n =====
-	var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+	const edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
 	function t(tag) {
-		if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag);
+		if (edaObj && edaObj.sys_I18n)
+			return edaObj.sys_I18n.text(tag);
 		return tag;
 	}
 	function tArgs(tag, ...args) {
-		if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
+		if (edaObj && edaObj.sys_I18n)
+			return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
 		return tag;
 	}
 
@@ -97,13 +100,13 @@
 
 	async function processPDFFile(file) {
 		if (typeof pdfjsLib === 'undefined') {
-			showStatus(t('pdfassistant.error.pdfjs.load'), 'error');
+			showStatus(t('PDF.js 库加载失败，请检查网络连接。'), 'error');
 			return;
 		}
 
 		isProcessing = true;
 		updateInputState();
-		showStatus(t('pdfassistant.status.extracting'), '');
+		showStatus(t('正在提取 PDF 并进行版面分析...'), '');
 
 		try {
 			const arrayBuffer = await file.arrayBuffer();
@@ -116,7 +119,7 @@
 			uploadArea.classList.add('hidden');
 			pdfInfo.classList.remove('hidden');
 			pdfName.textContent = pdfFileName;
-			pdfPages.textContent = tArgs('pdfassistant.pdf.pages', pdfPageCount, formatSize(pdfContent.length));
+			pdfPages.textContent = tArgs('（${1} 页，${2}）', pdfPageCount, formatSize(pdfContent.length));
 			userInput.disabled = false;
 			btnSend.disabled = false;
 			userInput.focus();
@@ -124,14 +127,14 @@
 			updateInputState();
 
 			removeStatus();
-			addSystemMessage(tArgs('pdfassistant.pdf.loaded', pdfFileName, pdfPageCount));
+			addSystemMessage(tArgs('PDF 已加载：${1}（${2} 页）', pdfFileName, pdfPageCount));
 			chatHistory = [];
 		}
 		catch (err) {
 			console.error('[PDFAssistant] Extraction failed:', err);
 			isProcessing = false;
 			updateInputState();
-			showStatus(tArgs('pdfassistant.error.extract.failed', err.message), 'error');
+			showStatus(tArgs('PDF 提取失败：${1}', err.message), 'error');
 		}
 	}
 
@@ -462,7 +465,7 @@
 
 		for (let colIdx = 0; colIdx < columnResult.columns.length; colIdx++) {
 			const colLines = columnResult.columns[colIdx];
-			output += `${tArgs('pdfassistant.column.marker', colIdx + 1)}\n`;
+			output += `${tArgs('[第 ${1} 列]', colIdx + 1)}\n`;
 			output += renderSingleColumn(colLines, bodyFontSize);
 			output += '\n\n';
 		}
@@ -487,7 +490,7 @@
 			// Detect headers (larger font)
 			const maxFontSize = Math.max(...line.items.map(it => it.fontSize));
 			if (maxFontSize > bodyFontSize * 1.25) {
-				lineText += t('pdfassistant.section.marker');
+				lineText += t('[章节: ');
 			}
 
 			for (let i = 0; i < line.items.length; i++) {
@@ -580,11 +583,11 @@
 		catch (err) {
 			console.error('[PDFAssistant] API call failed:', err);
 			if (fullText) {
-				update(`${fullText}\n\n**${t('pdfassistant.error.prefix')}**${err.message}`);
+				update(`${fullText}\n\n**${t('错误：')}**${err.message}`);
 			}
 			else {
 				contentDiv.parentElement.remove();
-				addMessage('error', tArgs('pdfassistant.error.ai.failed', err.message));
+				addMessage('error', tArgs('获取 AI 响应失败：${1}', err.message));
 			}
 		}
 		finally {
@@ -621,7 +624,7 @@ When answering:
 		];
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			throw new Error(t('pdfassistant.error.api.not.configured'));
+			throw new Error(t('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。'));
 		}
 
 		const response = await fetch(apiConfig.apiUrl, {
@@ -639,7 +642,7 @@ When answering:
 
 		if (!response.ok) {
 			const errorText = await response.text().catch(() => 'Unknown error');
-			throw new Error(tArgs('pdfassistant.error.api', response.status, errorText));
+			throw new Error(tArgs('API 错误 ${1}：${2}', response.status, errorText));
 		}
 
 		const reader = response.body.getReader();
@@ -769,13 +772,13 @@ When answering:
 		chatHistory = [];
 		chatMessages.innerHTML = '';
 		if (pdfContent) {
-			addSystemMessage(tArgs('pdfassistant.pdf.loaded', pdfFileName, pdfPageCount));
+			addSystemMessage(tArgs('PDF 已加载：${1}（${2} 页）', pdfFileName, pdfPageCount));
 		}
 		else {
 			chatMessages.innerHTML = `
 				<div class="welcome-message">
-					<p>${t('pdfassistant.welcome.1')}</p>
-					<p>${t('pdfassistant.welcome.2')}</p>
+					<p>${t('你好！我是你的 PDF 助手。')}</p>
+					<p>${t('上传 PDF 文件后，可以向我提问任何关于文档内容的问题。')}</p>
 				</div>`;
 		}
 	}
@@ -798,16 +801,16 @@ When answering:
 
 	function formatSize(chars) {
 		if (chars < 1024)
-			return `${chars}${t('pdfassistant.unit.chars')}`;
+			return `${chars}${t(' 字符')}`;
 		if (chars < 1024 * 1024)
-			return `${(chars / 1024).toFixed(1)}${t('pdfassistant.unit.kchars')}`;
-		return `${(chars / (1024 * 1024)).toFixed(1)}${t('pdfassistant.unit.mchars')}`;
+			return `${(chars / 1024).toFixed(1)}${t('K 字符')}`;
+		return `${(chars / (1024 * 1024)).toFixed(1)}${t('M 字符')}`;
 	}
 
 	// ===== URL-based PDF Loading =====
 	async function loadPdfFromUrl(url, name) {
 		if (typeof pdfjsLib === 'undefined') {
-			throw new TypeError(t('pdfassistant.error.pdfjs.load'));
+			throw new TypeError(t('PDF.js 库加载失败，请检查网络连接。'));
 		}
 
 		const response = await fetch(url);
@@ -828,9 +831,9 @@ When answering:
 			const page = await pdf.getPage(i);
 			const pageText = await extractPageStructured(page, i, totalPages);
 			if (pageText.trim()) {
-				fullText += `\n\n${tArgs('pdfassistant.page.marker', i, totalPages)}\n${pageText}`;
+				fullText += `\n\n${tArgs('=== 第 ${1} 页 / 共 ${2} 页 ===', i, totalPages)}\n${pageText}`;
 			}
-			showStatus(tArgs('pdfassistant.status.loading', i, totalPages, name), '');
+			showStatus(tArgs('正在加载 (${1}/${2}): ${3}', i, totalPages, name), '');
 		}
 
 		return { text: fullText.trim(), pages: totalPages };
@@ -846,26 +849,26 @@ When answering:
 
 		for (let i = 0; i < datasheets.length; i++) {
 			const ds = datasheets[i];
-			showStatus(tArgs('pdfassistant.status.loading', i + 1, datasheets.length, ds.name), '');
+			showStatus(tArgs('正在加载 (${1}/${2}): ${3}', i + 1, datasheets.length, ds.name), '');
 
 			try {
 				const result = await loadPdfFromUrl(ds.url, ds.name);
 				if (result.text) {
-					allText += `\n\n========== ${tArgs('pdfassistant.datasheet.label', ds.name)} ==========\n${result.text}`;
+					allText += `\n\n========== ${tArgs('数据手册: ${1}', ds.name)} ==========\n${result.text}`;
 					totalPages += result.pages;
 					loadedNames.push(ds.name);
 				}
 			}
 			catch (err) {
 				console.warn(`[PDFAssistant] Failed to load datasheet for ${ds.name}:`, err);
-				allText += `\n\n========== ${tArgs('pdfassistant.datasheet.label', ds.name)} ==========\n${tArgs('pdfassistant.datasheet.load.failed', err.message)}`;
+				allText += `\n\n========== ${tArgs('数据手册: ${1}', ds.name)} ==========\n${tArgs('[加载失败: ${1}]', err.message)}`;
 			}
 		}
 
 		if (!loadedNames.length) {
 			isProcessing = false;
 			updateInputState();
-			showStatus(t('pdfassistant.error.all.datasheets.failed'), 'error');
+			showStatus(t('所有数据手册加载失败。'), 'error');
 			return;
 		}
 
@@ -876,7 +879,7 @@ When answering:
 		uploadArea.classList.add('hidden');
 		pdfInfo.classList.remove('hidden');
 		pdfName.textContent = pdfFileName;
-		pdfPages.textContent = tArgs('pdfassistant.pdf.pages', pdfPageCount, formatSize(pdfContent.length));
+		pdfPages.textContent = tArgs('（${1} 页，${2}）', pdfPageCount, formatSize(pdfContent.length));
 		userInput.disabled = false;
 		btnSend.disabled = false;
 		userInput.focus();
@@ -884,7 +887,7 @@ When answering:
 		updateInputState();
 
 		removeStatus();
-		addSystemMessage(tArgs('pdfassistant.datasheets.loaded', loadedNames.length, loadedNames.join(', '), pdfPageCount));
+		addSystemMessage(tArgs('已加载 ${1} 个数据手册：${2}（共 ${3} 页）', loadedNames.length, loadedNames.join(', '), pdfPageCount));
 		chatHistory = [];
 	}
 
@@ -904,7 +907,7 @@ When answering:
 		}
 
 		if (!apiConfig.apiUrl || !apiConfig.apiKey || !apiConfig.model) {
-			addSystemMessage(t('pdfassistant.error.api.not.configured'));
+			addSystemMessage(t('API 未配置。请前往 PDF 助手 > 设置 中填写 API URL、密钥和模型。'));
 		}
 
 		// Check for pending datasheets from selection

@@ -1,8 +1,8 @@
 {
-	"name": "datasheet-ai-assistant",
-	"uuid": "6845580793f04e4bb70673dd7e1896b1",
-	"displayName": "数据手册AI问答助手",
-	"description": "选中原理图器件，自动获取数据手册，通过AI对话解答技术问题",
+	"name": "eext-datasheet-helper",
+	"uuid": "f7a3b8c1d2e4f5a6b7c8d9e0f1a2b3c4",
+	"displayName": "数据手册助手",
+	"description": "基于AI驱动的数据手册助手，帮助快速分析数据手册",
 	"version": "1.7.1",
 	"publisher": "EasyEDA",
 	"engines": {

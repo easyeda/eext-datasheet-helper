@@ -1,11 +1,3 @@
 {
-	"PDF Assistant": "PDF 助手",
-	"Open PDF Assistant": "打开 PDF 助手",
-	"Open Datasheet from Selection": "从选中器件打开数据手册",
-	"Settings": "设置",
-	"数据手册助手": "数据手册助手",
-	"基于AI驱动的数据手册助手，帮助快速分析数据手册": "基于AI驱动的数据手册助手，帮助快速分析数据手册",
-	"PDF": "PDF",
-	"AI": "AI",
-	"Assistant": "助手"
+	"About...": "关于..."
 }

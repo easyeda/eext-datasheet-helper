@@ -808,17 +808,134 @@ When answering:
 	}
 
 	// ===== URL-based PDF Loading =====
+
+	// 立创/嘉立创 atta CDN 域名
+	const LCSC_ATTA_HOST = 'https://atta.szlcsc.com';
+
+	/**
+	 * URL 归一化：将各种 datasheet URL 解析为可直接下载的 PDF 直链
+	 *
+	 * 支持的输入：
+	 *  1. 已是 .pdf 直链 → 直接返回
+	 *  2. www.lcsc.com/datasheet/C{code}.pdf → 请求拿 HTML，提取 datasheet.lcsc.com 真实直链
+	 *  3. item.szlcsc.com 预览页 → 尝试解析（可能被 WAF 拦截）
+	 */
+	async function resolveRealPdfUrl(url) {
+		if (!url) return url;
+
+		// 已经是可直接下载的 PDF 直链
+		// 排除 www.lcsc.com/datasheet/Cxxx.pdf（这个其实是 HTML 页面）
+		if (/\.pdf(\?|#|$)/i.test(url) && !/www\.lcsc\.com\/datasheet\//i.test(url)) {
+			return url;
+		}
+
+		var isLcscDatasheet = /www\.lcsc\.com\/datasheet\/C\d+\.pdf/i.test(url);
+		var isSzlcscPage = /item\.(szlcsc|jlcpcb)\.com|\/datasheet\//i.test(url);
+
+		if (!isLcscDatasheet && !isSzlcscPage) return url;
+
+		// 优先用 sys_ClientUrl 绕 CORS，失败回退 fetch
+		let htmlResp;
+		try {
+			htmlResp = await edaObj.sys_ClientUrl.request(url, 'GET');
+		} catch (_e) {
+			try {
+				htmlResp = await fetch(url);
+			} catch (_e2) {
+				console.warn('[PDFAssistant] Failed to fetch page:', _e2);
+				return url;
+			}
+		}
+		if (!htmlResp.ok) {
+			console.warn('[PDFAssistant] Page HTTP', htmlResp.status);
+			return url;
+		}
+		const html = await htmlResp.text();
+
+		// WAF 拦截检测
+		if (html.includes('aliyun_waf_aa') || html.includes('阻断') || html.includes('acw_sc__v2')) {
+			console.warn('[PDFAssistant] Page blocked by WAF');
+			return url;
+		}
+
+		// 按优先级匹配真实 PDF 直链
+		const patterns = [
+			// 1. datasheet.lcsc.com 直链（LCSC 国际站，无 WAF）
+			/https?:\/\/datasheet\.lcsc\.com\/[^"'\s<>]+\.pdf[^"'\s<>]*/i,
+			// 2. "pdfUrl":"https://..."
+			/"pdfUrl"\s*:\s*"(https?:\/\/[^"]+\.pdf[^"]*)"/i,
+			// 3. atta.szlcsc.com 直链
+			/https?:\/\/atta\.(?:szlcsc|jlcpcb)\.com\/[^"'\s<>]+\.pdf/i,
+			// 4. __NEXT_DATA__ JSON 中的 fileUrl（相对路径）
+			/"fileUrl"\s*:\s*"([^"]+\/upload\/public\/pdf\/[^"]+\.pdf)"/i,
+			// 5. /upload/public/pdf/ 路径
+			/https?:\/\/[^"'\s<>]+\/upload\/public\/pdf\/[^"'\s<>]+\.pdf/i,
+		];
+		for (const pattern of patterns) {
+			const m = html.match(pattern);
+			if (m) {
+				const rawUrl = m[1] || m[0];
+				let realUrl = rawUrl.startsWith('/') ? LCSC_ATTA_HOST + rawUrl : rawUrl;
+				realUrl = realUrl.split('#')[0];
+				console.warn('[PDFAssistant] Resolved real PDF URL:', realUrl);
+				return realUrl;
+			}
+		}
+		console.warn('[PDFAssistant] No PDF link found in page');
+		return url;
+	}
+
+	/**
+	 * 检测 ArrayBuffer 是否为有效 PDF（文件头 magic bytes）
+	 */
+	function validatePdfArrayBuffer(arrayBuffer) {
+		const bytes = new Uint8Array(arrayBuffer, 0, Math.min(5, arrayBuffer.byteLength));
+		let header = '';
+		for (let i = 0; i < bytes.length; i++) {
+			header += String.fromCharCode(bytes[i]);
+		}
+		if (header !== '%PDF-') {
+			throw new Error('NOT_PDF: 下载的内容不是有效的PDF文件（可能是网页预览页或WAF拦截页）');
+		}
+	}
+
 	async function loadPdfFromUrl(url, name) {
 		if (typeof pdfjsLib === 'undefined') {
 			throw new TypeError(t('PDF.js 库加载失败，请检查网络连接。'));
 		}
 
-		const response = await fetch(url);
+		// URL 归一化：预览页 → 真实 PDF 直链
+		try {
+			const resolvedUrl = await resolveRealPdfUrl(url);
+			if (resolvedUrl !== url) {
+				console.warn('[PDFAssistant] Preview page resolved to direct PDF:', resolvedUrl);
+				url = resolvedUrl;
+			}
+		} catch (resolveErr) {
+			console.warn('[PDFAssistant] Failed to resolve preview page, trying original URL:', resolveErr);
+		}
+
+		// 优先用 sys_ClientUrl 绕 CORS，失败回退 fetch
+		let response;
+		try {
+			response = await edaObj.sys_ClientUrl.request(url, 'GET');
+		} catch (_e) {
+			response = await fetch(url);
+		}
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 		}
 
 		const arrayBuffer = await response.arrayBuffer();
+
+		// 验证文件头：如果下载到的不是 PDF，给出明确错误
+		try {
+			validatePdfArrayBuffer(arrayBuffer);
+		} catch (validateErr) {
+			console.warn('[PDFAssistant] Downloaded content is not PDF:', validateErr.message);
+			throw validateErr;
+		}
+
 		return await extractPdfText(arrayBuffer, name);
 	}
 

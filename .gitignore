@@ -6,5 +6,3 @@
 /node_modules/
 /.eslintcache
 debug.log
-__pycache__/
-*.pyc

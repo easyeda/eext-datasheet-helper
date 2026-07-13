@@ -1,101 +1,96 @@
-const PLUGIN_TAG = '[PDFAssistant]';
-const DATASHEET_STORAGE_KEY = 'pdf_assistant_pending_datasheets';
-const DATASHEET_IFRAME_ID = 'pdf-assistant-chat';
+/**
+ * 数据手册AI问答助手 - 扩展主入口
+ *
+ * 功能流程：
+ * 1. 用户在原理图中选中器件
+ * 2. 点击菜单 → 获取器件数据手册URL
+ * 3. 打开IFrame对话窗口
+ */
 
-export async function openPdfAssistant(): Promise<void> {
+import * as extensionConfig from '../extension.json';
+
+// eslint-disable-next-line unused-imports/no-unused-vars
+export function activate(status?: 'onStartupFinished', arg?: string): void {}
+
+/**
+ * 打开AI问答窗口
+ * 获取选中器件的数据手册URL，存入Storage后打开IFrame
+ */
+export async function onOpenChat(): Promise<void> {
 	try {
-		await eda.sys_IFrame.openIFrame('/iframe/index.html', 850, 640, DATASHEET_IFRAME_ID, {
-			title: 'PDF Assistant',
-			maximizeButton: true,
-			minimizeButton: true,
-		});
-	}
-	catch (err) {
-		console.error(PLUGIN_TAG, 'Failed to open PDF Assistant:', err);
-		await eda.sys_Dialog.showInformationMessage('Failed to open PDF Assistant.');
-	}
-}
+		// 1. 尝试获取选中器件信息（可选）
+		let deviceInfo = {
+			designator: '',
+			name: '',
+			manufacturer: '',
+			manufacturerId: '',
+			supplier: '',
+			supplierId: '',
+			datasheetUrl: '',
+		};
 
-export async function openSettings(): Promise<void> {
-	try {
-		await eda.sys_IFrame.openIFrame('/iframe/settings.html', 480, 340, 'pdf-assistant-settings', {
-			title: 'PDF Assistant Settings',
-			maximizeButton: false,
-			minimizeButton: false,
-		});
-	}
-	catch (err) {
-		console.error(PLUGIN_TAG, 'Failed to open settings:', err);
-	}
-}
+		try {
+			const selectedIds = await eda.sch_SelectControl.getAllSelectedPrimitives_PrimitiveId();
+			if (selectedIds && selectedIds.length > 0) {
+				const components = await eda.sch_PrimitiveComponent.get(selectedIds);
+				if (components && components.length > 0) {
+					// 过滤出 Component 类型的器件
+					let targetComp = null;
+					for (const comp of components) {
+						const compType = comp.getState_ComponentType();
+						if (compType === 'part' || compType === 'component') {
+							targetComp = comp;
+							break;
+						}
+					}
+					if (!targetComp) {
+						targetComp = components[0];
+					}
 
-export async function openDatasheetFromSelection(): Promise<void> {
-	try {
-		// Determine current editor type
-		const docInfo = await eda.dmt_SelectControl.getCurrentDocumentInfo();
-		if (!docInfo) {
-			console.warn(PLUGIN_TAG, 'No active document found');
-			await eda.sys_Dialog.showInformationMessage('No active document found. Please open a schematic or PCB document first.');
-			return;
-		}
+					// 提取器件信息
+					const otherProp = targetComp.getState_OtherProperty();
+					const datasheetUrl = otherProp?.['Datasheet'] || otherProp?.['datasheet'] || '';
 
-		const docType = docInfo.documentType; // SCH=1, PCB=3
-		let selectedPrimitives: any[];
-
-		if (docType === 1) {
-			selectedPrimitives = await eda.sch_SelectControl.getAllSelectedPrimitives();
-		}
-		else if (docType === 3) {
-			selectedPrimitives = await eda.pcb_SelectControl.getAllSelectedPrimitives();
-		}
-		else {
-			console.warn(PLUGIN_TAG, 'Unsupported document type:', docType);
-			await eda.sys_Dialog.showInformationMessage('Please open a schematic or PCB document and select components.');
-			return;
-		}
-
-		if (!selectedPrimitives || selectedPrimitives.length === 0) {
-			await eda.sys_Dialog.showInformationMessage('No components selected. Please select components with a Datasheet property first.');
-			return;
-		}
-
-		// Extract Datasheet URLs from selected components
-		const datasheets: Array<{ name: string; url: string }> = [];
-
-		for (const prim of selectedPrimitives) {
-			try {
-				const designator = prim.getState_Designator?.() || 'Unknown';
-				const otherProps = prim.getState_OtherProperty?.();
-				if (!otherProps)
-					continue;
-
-				const datasheet = otherProps.Datasheet || otherProps.datasheet;
-				if (datasheet && typeof datasheet === 'string' && datasheet.startsWith('http')) {
-					datasheets.push({ name: designator, url: datasheet });
+					deviceInfo = {
+						designator: targetComp.getState_Designator() || '',
+						name: targetComp.getState_Name() || '',
+						manufacturer: targetComp.getState_Manufacturer() || '',
+						manufacturerId: targetComp.getState_ManufacturerId() || '',
+						supplier: targetComp.getState_Supplier() || '',
+						supplierId: targetComp.getState_SupplierId() || '',
+						datasheetUrl,
+					};
 				}
 			}
-			catch (err) {
-				console.warn(PLUGIN_TAG, 'Failed to read component properties:', err);
-			}
+		} catch (e) {
+			// 获取器件信息失败不影响打开窗口，用户可手动上传PDF
+			console.warn('获取器件信息失败:', e);
 		}
 
-		if (datasheets.length === 0) {
-			await eda.sys_Dialog.showInformationMessage('No Datasheet URL found in selected components. Please ensure the selected components have a Datasheet property with a valid URL.');
-			return;
-		}
+		// 2. 存入Storage供IFrame读取
+		await eda.sys_Storage.setExtensionUserConfig('currentDevice', JSON.stringify(deviceInfo));
 
-		// Store datasheets for iframe to pick up
-		await eda.sys_Storage.setExtensionUserConfig(DATASHEET_STORAGE_KEY, JSON.stringify(datasheets));
-
-		// Open the PDF Assistant iframe
-		await eda.sys_IFrame.openIFrame('/iframe/index.html', 850, 640, DATASHEET_IFRAME_ID, {
-			title: `PDF Assistant (${datasheets.length} datasheets)`,
+		// 3. 打开IFrame对话窗口
+		await eda.sys_IFrame.openIFrame('/iframe/chat.html', 500, 680, 'datasheet-chat', {
+			title: '数据手册AI助手',
 			maximizeButton: true,
 			minimizeButton: true,
+			minimizeStyle: 'collapsed',
 		});
+	} catch (err) {
+		eda.sys_Dialog.showInformationMessage(
+			`打开失败: ${err instanceof Error ? err.message : String(err)}`,
+			'错误',
+		);
 	}
-	catch (err) {
-		console.error(PLUGIN_TAG, 'Failed to open datasheet from selection:', err);
-		await eda.sys_Dialog.showInformationMessage('Failed to load datasheets. Check console for details.');
-	}
+}
+
+/**
+ * 关于
+ */
+export function about(): void {
+	eda.sys_Dialog.showInformationMessage(
+		`${extensionConfig.displayName} v${extensionConfig.version}`,
+		'关于',
+	);
 }

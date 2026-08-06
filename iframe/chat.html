@@ -246,6 +246,7 @@ html, body {
 	var OCR_SCALE = 2.0;               // OCR渲染缩放（提高清晰度）
 	var PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';
 	var TESSERACT_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/';
+	var JINA_READER_BASE = 'https://r.jina.ai/http://r.jina.ai/http://';
 
 	var state = {
 		device: null,             // 当前器件信息
@@ -255,12 +256,17 @@ html, body {
 		pageTextCache: {},        // 页文本缓存 { pageNum: text }
 		ocrPageCache: {},         // OCR结果缓存 { pageNum: text }
 		isScannedPdf: null,       // 是否为扫描型PDF
+		isTextDatasheet: false,   // 是否使用了HTML/Markdown文本兜底
 		ocrLang: null,            // OCR语言（自动检测: 'eng' 或 'chi_sim+eng'）
 		parsedPages: new Set(),   // 已解析的页号集合
 		chatHistory: [],          // 对话历史 [{role, content}]
 		isLoadingPdf: false,
 		isAsking: false,
 		tesseractWorker: null,
+		currentDeviceKey: '',
+		selectionPollTimer: null,
+		selectionPollBusy: false,
+		pendingAutoDevice: null,
 	};
 
 	// ============================================
@@ -340,7 +346,12 @@ html, body {
 
 		// 如果有数据手册URL，自动开始加载
 		if (state.device && state.device.datasheetUrl) {
+			state.currentDeviceKey = getDeviceKey(state.device);
+			startSelectionWatcher();
 			await loadPdf(state.device.datasheetUrl);
+		}
+		else {
+			startSelectionWatcher();
 		}
 	}
 
@@ -394,6 +405,115 @@ html, body {
 		].join('\n');
 	}
 
+	function getDeviceKey(device) {
+		if (!device) return '';
+		return [
+			device.designator || '',
+			device.name || '',
+			device.manufacturerId || '',
+			device.supplierId || '',
+			device.datasheetUrl || '',
+		].join('|');
+	}
+
+	function resetChatForDeviceChange() {
+		state.chatHistory = [];
+		el.chatMessages.innerHTML = '';
+	}
+
+	function getDatasheetUrlFromProps(otherProp) {
+		if (!otherProp) return '';
+		return otherProp.Datasheet
+			|| otherProp.datasheet
+			|| otherProp.DATASHEET
+			|| otherProp.DataSheet
+			|| '';
+	}
+
+	async function getSelectedDeviceInfo() {
+		var selectedIds = await eda.sch_SelectControl.getAllSelectedPrimitives_PrimitiveId();
+		if (!selectedIds || selectedIds.length === 0) return null;
+
+		var components = await eda.sch_PrimitiveComponent.get(selectedIds);
+		if (!components || components.length === 0) return null;
+
+		var targetComp = null;
+		for (var i = 0; i < components.length; i++) {
+			var comp = components[i];
+			var compType = comp.getState_ComponentType && comp.getState_ComponentType();
+			if (compType === 'part' || compType === 'component') {
+				targetComp = comp;
+				break;
+			}
+		}
+		if (!targetComp) targetComp = components[0];
+
+		var otherProp = targetComp.getState_OtherProperty ? targetComp.getState_OtherProperty() : {};
+		return {
+			designator: targetComp.getState_Designator ? (targetComp.getState_Designator() || '') : '',
+			name: targetComp.getState_Name ? (targetComp.getState_Name() || '') : '',
+			manufacturer: targetComp.getState_Manufacturer ? (targetComp.getState_Manufacturer() || '') : '',
+			manufacturerId: targetComp.getState_ManufacturerId ? (targetComp.getState_ManufacturerId() || '') : '',
+			supplier: targetComp.getState_Supplier ? (targetComp.getState_Supplier() || '') : '',
+			supplierId: targetComp.getState_SupplierId ? (targetComp.getState_SupplierId() || '') : '',
+			datasheetUrl: getDatasheetUrlFromProps(otherProp),
+		};
+	}
+
+	async function applySelectedDevice(device, autoMessage) {
+		var key = getDeviceKey(device);
+		if (!key || key === state.currentDeviceKey) return;
+
+		state.currentDeviceKey = key;
+		state.device = device;
+		await eda.sys_Storage.setExtensionUserConfig('currentDevice', JSON.stringify(device));
+		renderDeviceInfo();
+		resetChatForDeviceChange();
+
+		if (!device.datasheetUrl) {
+			setPdfError('当前选中器件没有数据手册链接');
+			addSystemMessage('当前选中器件没有数据手册链接，可手动上传PDF。');
+			return;
+		}
+
+		if (autoMessage) {
+			addSystemMessage('检测到选中器件变化，正在自动加载数据手册...');
+		}
+
+		if (state.isLoadingPdf) {
+			state.pendingAutoDevice = device;
+			return;
+		}
+
+		await loadPdf(device.datasheetUrl);
+	}
+
+	async function checkSelectedDeviceChange() {
+		if (state.selectionPollBusy) return;
+		state.selectionPollBusy = true;
+		try {
+			var device = await getSelectedDeviceInfo();
+			if (device) {
+				await applySelectedDevice(device, true);
+			}
+		} catch (err) {
+			console.warn('Failed to watch selected device:', err);
+		} finally {
+			state.selectionPollBusy = false;
+		}
+	}
+
+	function startSelectionWatcher() {
+		if (state.selectionPollTimer) return;
+		state.selectionPollTimer = setInterval(checkSelectedDeviceChange, 1200);
+		window.addEventListener('beforeunload', function () {
+			if (state.selectionPollTimer) {
+				clearInterval(state.selectionPollTimer);
+				state.selectionPollTimer = null;
+			}
+		});
+	}
+
 	// ============================================
 	// PDF 加载与解析
 	// ============================================
@@ -431,6 +551,171 @@ html, body {
 			throw new Error('PDF下载失败: HTTP ' + response.status);
 		}
 		return await response.blob();
+	}
+
+	function decodeHtmlAttr(value) {
+		var textarea = document.createElement('textarea');
+		textarea.innerHTML = value || '';
+		return textarea.value;
+	}
+
+	function normalizePdfUrl(value, pageUrl) {
+		if (!value) return '';
+		var url = decodeHtmlAttr(value).replace(/\\u0026/g, '&').replace(/\\\//g, '/').trim();
+		if (!url) return '';
+
+		if (url.indexOf('//') === 0) {
+			url = 'https:' + url;
+		} else if (url.indexOf('/upload/public/pdf/') === 0) {
+			url = 'https://atta.szlcsc.com' + url;
+		} else if (url[0] === '/') {
+			url = new URL(url, pageUrl).href;
+		}
+
+		return url.replace(/#.*$/, '');
+	}
+
+	async function responseToText(response) {
+		if (typeof response.text === 'function') {
+			return await response.text();
+		}
+		if (typeof response.blob === 'function') {
+			return await (await response.blob()).text();
+		}
+		return String(response || '');
+	}
+
+	async function requestText(url) {
+		var response;
+		try {
+			response = await eda.sys_ClientUrl.request(url, 'GET');
+		} catch (clientErr) {
+			console.warn('sys_ClientUrl failed for datasheet HTML:', clientErr);
+			throw new Error('无法读取数据手册HTML页面，请使用PDF直链或手动上传PDF');
+		}
+		if (response.ok === false) {
+			throw new Error('HTML页面下载失败: HTTP ' + response.status);
+		}
+		return await responseToText(response);
+	}
+
+	function isKnownDatasheetPageUrl(url) {
+		return /item\.(?:szlcsc|jlcpcb)\.com\/datasheet\//i.test(url)
+			|| /www\.lcsc\.com\/datasheet\/C\d+\.pdf/i.test(url);
+	}
+
+	function readerUrlFor(pageUrl) {
+		return JINA_READER_BASE + pageUrl;
+	}
+
+	function stripReaderMetadata(text) {
+		if (!text) return '';
+		var content = text.replace(/\r\n/g, '\n');
+		var marker = '\nMarkdown Content:\n';
+		var markerIndex = content.indexOf(marker);
+		if (markerIndex !== -1) {
+			content = content.slice(markerIndex + marker.length);
+		}
+		return content.trim();
+	}
+
+	async function requestReaderMarkdown(url) {
+		var readerUrl = readerUrlFor(url);
+		var response;
+		try {
+			response = await eda.sys_ClientUrl.request(readerUrl, 'GET');
+		} catch (clientErr) {
+			console.warn('sys_ClientUrl failed for datasheet reader:', clientErr);
+			response = await fetch(readerUrl, { mode: 'cors' });
+		}
+		if (response.ok === false) {
+			throw new Error('HTML文本解析失败: HTTP ' + response.status);
+		}
+		return await responseToText(response);
+	}
+
+	async function loadTextDatasheetFromPage(url) {
+		setPdfStatus('正在解析数据手册HTML文本...', 15, true);
+		var markdown = await requestReaderMarkdown(url);
+		var text = stripReaderMetadata(markdown);
+		if (!text || text.length < 100) {
+			throw new Error('HTML页面未解析出可用的数据手册文本');
+		}
+
+		state.pdfDoc = null;
+		state.pdfBlob = null;
+		state.totalPages = 1;
+		state.pageTextCache = { 1: text };
+		state.ocrPageCache = {};
+		state.isScannedPdf = false;
+		state.isTextDatasheet = true;
+		state.ocrLang = null;
+		state.parsedPages = new Set([1]);
+		state.isLoadingPdf = false;
+
+		setPdfLoaded(1);
+		el.pdfPageCount.textContent = 'HTML文本';
+		addSystemMessage('已通过数据手册HTML页面解析出文本内容，可直接提问。');
+	}
+
+	function collectPdfUrls(node, result) {
+		if (!node || typeof node !== 'object') return;
+		if (typeof node.fileUrl === 'string' && /\.pdf(?:[?#]|$)/i.test(node.fileUrl)) {
+			result.push(node.fileUrl + (node.urlSign || ''));
+		}
+		Object.keys(node).forEach(function (key) {
+			var value = node[key];
+			if (typeof value === 'string' && /\.pdf(?:[?#]|$)/i.test(value)) {
+				result.push(value);
+			} else if (value && typeof value === 'object') {
+				collectPdfUrls(value, result);
+			}
+		});
+	}
+
+	function extractPdfUrlFromHtml(html, pageUrl) {
+		var match = html.match(/<iframe[^>]+src=["']([^"']+\.pdf[^"']*)["']/i)
+			|| html.match(/https?:\/\/atta\.(?:szlcsc|jlcpcb)\.com\/[^"'\s<>]+\.pdf[^"'\s<>]*/i)
+			|| html.match(/https?:\/\/datasheet\.lcsc\.com\/[^"'\s<>]+\.pdf[^"'\s<>]*/i)
+			|| html.match(/"fileUrl"\s*:\s*"([^"]+\.pdf[^"]*)"/i)
+			|| html.match(/"pdfUrl"\s*:\s*"([^"]+\.pdf[^"]*)"/i);
+
+		if (match) {
+			return normalizePdfUrl(match[1] || match[0], pageUrl);
+		}
+
+		var nextData = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+		if (nextData) {
+			try {
+				var data = JSON.parse(nextData[1]);
+				var urls = [];
+				collectPdfUrls(data, urls);
+				if (urls.length) {
+					return normalizePdfUrl(urls[0], pageUrl);
+				}
+			} catch (err) {
+				console.warn('Failed to parse __NEXT_DATA__ for datasheet PDF:', err);
+			}
+		}
+
+		return '';
+	}
+
+	async function resolvePdfUrl(url) {
+		if (!url) return url;
+		if (/\.pdf(?:[?#]|$)/i.test(url) && !/www\.lcsc\.com\/datasheet\/C\d+\.pdf/i.test(url)) {
+			return normalizePdfUrl(url, url);
+		}
+
+		if (!isKnownDatasheetPageUrl(url)) return url;
+
+		var html = await requestText(url);
+		var realPdfUrl = extractPdfUrlFromHtml(html, url);
+		if (!realPdfUrl) {
+			throw new Error('未在数据手册HTML页面中找到PDF直链');
+		}
+		console.warn('Resolved datasheet HTML to PDF:', realPdfUrl);
+		return realPdfUrl;
 	}
 
 	/**
@@ -494,6 +779,7 @@ html, body {
 		state.pageTextCache = {};
 		state.ocrPageCache = {};
 		state.isScannedPdf = null;
+		state.isTextDatasheet = false;
 		state.ocrLang = null;
 		state.parsedPages = new Set();
 		state.isLoadingPdf = true;
@@ -569,6 +855,12 @@ html, body {
 			addSystemMessage('⚠️ PDF加载失败: ' + errMsg);
 		} finally {
 			state.isLoadingPdf = false;
+			if (state.pendingAutoDevice) {
+				var pending = state.pendingAutoDevice;
+				state.pendingAutoDevice = null;
+				state.currentDeviceKey = '';
+				await applySelectedDevice(pending, true);
+			}
 		}
 	}
 
@@ -578,9 +870,13 @@ html, body {
 	async function loadPdf(url) {
 		if (state.isLoadingPdf) return;
 		state.isLoadingPdf = true;
+		var originalUrl = url;
 		setPdfStatus('正在下载数据手册...', 0, true);
 
 		try {
+			setPdfStatus('正在解析数据手册链接...', 5, true);
+			url = await resolvePdfUrl(url);
+
 			// 1. 下载PDF — 优先用 eda.sys_ClientUrl，失败则回退 fetch
 			var blob;
 			try {
@@ -599,6 +895,15 @@ html, body {
 		} catch (err) {
 			console.error('PDF load error:', err);
 			var errMsg = err.message || String(err);
+			if (isKnownDatasheetPageUrl(originalUrl)) {
+				try {
+					await loadTextDatasheetFromPage(originalUrl);
+					return;
+				} catch (textErr) {
+					console.warn('Datasheet HTML text fallback failed:', textErr);
+					errMsg += '；HTML文本解析也失败: ' + (textErr.message || String(textErr));
+				}
+			}
 			if (errMsg.indexOf('外部交互权限') !== -1) {
 				setPdfError('需要启用外部交互权限才能下载PDF');
 				addSystemMessage('⚠️ 无法下载数据手册：请在扩展管理器中启用本扩展的「外部交互权限」，或检查网络连接。');
@@ -607,6 +912,12 @@ html, body {
 				addSystemMessage('⚠️ 数据手册加载失败: ' + errMsg);
 			}
 			state.isLoadingPdf = false;
+			if (state.pendingAutoDevice) {
+				var pending = state.pendingAutoDevice;
+				state.pendingAutoDevice = null;
+				state.currentDeviceKey = '';
+				await applySelectedDevice(pending, true);
+			}
 		}
 	}
 

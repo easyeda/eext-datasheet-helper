@@ -4,7 +4,6 @@
 
 嘉立创EDA专业版扩展 — 选中原理图器件，自动获取数据手册，通过AI对话解答技术问题。
 
-
 ## 功能演示
 
 **选中器件，点击菜单打开AI问答**
@@ -58,3 +57,9 @@
 | 外部交互权限 | 下载 PDF 数据手册、调用 AI API |
 
 如遇 PDF 下载失败，请在扩展管理器中确认已启用本扩展的**外部交互权限**。
+
+## 致谢
+
+[pdf.js](https://github.com/mozilla/pdf.js) 提供 PDF 文本解析能力
+[Tesseract.js](https://github.com/naptha/tesseract.js) 提供扫描型文档 OCR 支持。
+[Jina AI Reader](https://github.com/jina-ai/reader) 作为文本解析兜底方案，以便在无法直接读取预览页或 PDF 直链时继续完成数据手册问答。

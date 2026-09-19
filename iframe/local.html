@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>数据手册AI助手</title>
+	<link rel="stylesheet" href="/iframe/theme.css"><link rel="stylesheet" href="/iframe/local.css">
+</head>
+<body>
+	<header id="device-bar"><div id="device-info-wrap"><button id="upload">打开 PDF</button><select id="library" aria-label="缓存的手册"><option value="">文档缓存</option></select><span id="document-name" class="device-name" hidden>数据手册AI助手</span></div><div class="actions"><select id="answer-source" aria-label="问答来源"><option value="local">本地模型</option><option value="api">在线 API</option></select><button id="reader-toggle" aria-expanded="false">阅读 PDF</button><button id="settings-button">设置</button></div></header>
+	<input id="file" type="file" accept="application/pdf" hidden><input id="url" type="hidden">
+
+	<main class="chat-only" id="workspace">
+		<section class="reader" hidden>
+			<div class="toolbar"><button id="prev" aria-label="上一页">‹</button><input id="page" type="number" min="1" value="1" aria-label="当前页"><span id="total">/ 0</span><button id="next" aria-label="下一页">›</button><select id="zoom" aria-label="缩放"><option value="0.8">80%</option><option value="fit" selected>适合宽度</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select><label><input type="checkbox" id="show-translation">显示译文</label><span id="page-state">未打开文档</span></div>
+			<div class="toolbar enhancements"><select id="direction" aria-label="翻译方向"><option value="en-zh">英译中</option><option value="zh-en">中译英</option></select><button id="translate-page">翻译本页</button><button id="reader-cancel" hidden>取消</button><span id="reader-status" role="status"></span></div>
+			<div id="viewport"><div id="empty"><h1>阅读原文，按需增强</h1><p>打开 PDF 即可阅读和提问。</p><p>扫描页可在设置中选择 VLM 问答流程。</p></div><div id="paper" hidden><canvas id="pdf-canvas"></canvas><div id="text-layer"></div></div></div>
+			<div id="selection" hidden><span id="selection-preview"></span><button id="explain">解释</button><button id="followup">追问</button><button id="translate-selection">翻译</button><button id="clear-selection">×</button></div>
+		</section>
+		<aside>
+
+			<div id="messages" aria-live="polite"><div id="notice" class="message system"><span id="status" role="status">打开 PDF 后即可提问。</span><button id="retry" hidden>重试 / 继续</button></div><div class="welcome-msg"><p class="welcome-title">数据手册AI问答助手</p><p class="welcome-desc">选中器件或打开 PDF，提问关于数据手册的问题</p><div class="suggestions"><button class="chip" data-question="列出器件的关键电气参数">列出关键电气参数</button><button class="chip" data-question="器件的引脚定义是什么？">引脚定义</button><button class="chip" data-question="器件的封装信息">封装信息</button></div></div></div>
+			<form id="question-form"><textarea id="question" rows="3" placeholder="输入你的问题..." aria-label="问题"></textarea><button id="ask" type="submit" class="primary">发送</button></form>
+
+		</aside>
+	</main>
+	<dialog id="open-pdf"><h2>打开 PDF</h2><div class="open-options"><button id="import-local">从本地文件导入</button><button id="import-schematic">从原理图中加载</button><label>从缓存加载<select id="open-library" aria-label="选择缓存文档"><option value="">请选择缓存</option></select></label><button id="import-cache">加载所选缓存</button></div><div class="dialog-actions"><button id="close-open">关闭</button></div></dialog>
+	<dialog id="settings"><form id="settings-form">
+		<h2 id="settings-title">模型与问答设置</h2><div id="local-settings"><p class="hint">仅在使用对应功能时加载模型。首次下载后缓存；也可导入完整 ONNX 模型文件夹。</p>
+		<div class="grid"><label>计算设备<select id="device"><option value="auto">自动（优先 WebGPU）</option><option value="cpu">CPU / WASM</option><option value="webgpu">仅 WebGPU</option></select></label><label>模型源<select id="mirror-preset"><option value="https://huggingface.co">Hugging Face</option><option value="https://hf-mirror.com">HF-Mirror</option><option value="custom">自定义</option></select><input id="mirror" type="url" required></label></div>
+		</div><div class="toolbar"><label>问答流程 <select id="pipeline"><option value="text">文字提取 → 向量化 → 问答</option><option value="vlm">VLM 识别 → 向量化 → 问答</option></select></label></div><label><input id="vector-enabled" type="checkbox">启用向量化（关闭后将全文载入问答上下文）</label>
+		<fieldset id="api-fields"><legend>在线 API 配置</legend><label>API 地址<input id="api-url" placeholder="https://example.com/v1"></label><label>API Key<input id="api-key" type="password" autocomplete="off" placeholder="无认证的本机端点可留空"></label><label>模型名称<input id="api-model"></label><p class="hint">选择 API 后会发送问题、检索内容和必要历史；OCR、向量和翻译仍在本地执行。</p></fieldset>
+		<div id="local-model-settings"><div id="model-fields"></div>
+		<p class="hint">Qwen 0.6B 为轻量预设，复杂分析可更换较大兼容模型或使用 API。Granite-Docling 中文识别为实验性支持。导入时选择模型根目录，包含配置、处理器及完整权重；并非任意 ONNX 都兼容。</p></div>
+		<fieldset><legend>文档缓存</legend><select id="delete-library" aria-label="待删除缓存"></select><button id="delete-doc" type="button">删除所选缓存</button></fieldset><div class="dialog-actions"><button id="close-settings" type="button">关闭</button><button id="save-settings" class="primary" type="submit">保存设置</button></div>
+	</form></dialog>
+	<script src="/iframe/assets/pdf.min.js"></script><script src="/iframe/local.js"></script>
+</body>
+</html>

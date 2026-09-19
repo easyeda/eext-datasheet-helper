@@ -1,32 +1,35 @@
-[简体中文](#) | [English](./README.en.md) | [繁體中文](./README.zh-Hant.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)
-
 # 数据手册AI问答助手
 
-嘉立创EDA专业版扩展 — 选中原理图器件，自动获取数据手册，通过AI对话解答技术问题。
+**V1.9.1起插件完成重构，支持本地AI模式，并引入VLM视觉模型、Embedding向量模型、LLM大语言模型，使用本地模式需要确保设备有较好性能**
+
+基于 VLM 文档视觉模型 的数据手册AI问答助手。
+导入 PDF 数据手册，提问时自动检索相关内容，通过 AI 模型生成回答。
+
+- 默认通用模型：[Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)
+- 默认VLM 文档视觉模型：[granite-docling-258M](https://huggingface.co/ibm-granite/granite-docling-258M)
+- 默认向量模型：[multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small)
+- 默认中英互译模型：[Helsinki-NLP opus-mt](https://huggingface.co/Helsinki-NLP)
+- 默认模型镜像站：[🤗HuggingFace](https://huggingface.co/)
 
 ## 功能演示
 
-**选中器件，点击菜单打开AI问答**
+### 本地AI模式 VLM+Embedding+LLM的WebGPU推理
 
-![AI对话窗口](./images/image1.png)
+| 推理效果 | 推理配置 |
+| --- | --- |
+|  ![alt text](images/gif1.gif)   |   ![alt text](images/image4.png)  |
 
-**AI 对话窗口 — 自动加载数据手册，流式问答**
+### 在线AI模式 基于在线API问答
 
-![选中器件菜单](./images/image.png)
+| 推理效果 | 推理配置 |
+| --- | --- |
+|  ![alt text](images/gif3.gif)   |   ![alt text](images/image2.png)  |
 
-## 功能特性
+### PDF阅读器 本地翻译功能
 
-- **一键启动**：在原理图中选中器件，通过菜单快速打开AI问答窗口
-- **自动获取数据手册**：自动读取器件关联的 Datasheet URL 并下载 PDF
-- **智能PDF解析**：
-  - 文本型 PDF 直接提取文字内容（pdf.js）
-  - 扫描型 PDF 自动切换 OCR 识别（Tesseract.js）
-- **按需搜索策略**：根据用户提问关键词，在数据手册中智能匹配相关段落，未命中时自动扩展解析更多页面
-- **AI流式对话**：基于 OpenAI 兼容 API，支持 SSE 流式实时输出
-- **上下文管理**：对话历史自动携带，最多保留最近 6 条记录
-- **Markdown 渲染**：支持代码块、表格、列表等格式的富文本展示
-- **明暗主题自适应**：跟随系统亮色/暗色主题
-- **自定义 API 配置**：支持配置 API 端点、密钥、模型名称
+| 原文 | 译文 |
+| --- | --- |
+|  ![alt text](images/7.png)  |  ![alt text](images/6.png)  |
 
 ## 快速开始
 
@@ -36,19 +39,6 @@
 2. 打开嘉立创EDA专业版
 3. 进入 **高级 → 扩展管理器 → 上传/安装扩展**
 4. 选择下载的 `.eext` 文件完成安装
-
-### 使用步骤
-
-1. 在原理图中选中一个器件
-2. 点击顶部菜单 **数据手册AI助手 → 打开AI问答**
-3. 首次使用时，点击窗口右上角的 ⚙ 图标配置 AI API 信息：
-   - **API 端点**：如 `https://api.openai.com/v1`
-   - **API Key**：你的 AI 服务密钥
-   - **模型名称**：如 `gpt-4o-mini`
-4. 数据手册加载完成后，直接在输入框中提问
-
-> [!TIP]
-> 提问示例：列出器件的关键电气参数、引脚定义是什么、封装信息、工作电压范围等。
 
 ## 权限要求
 
@@ -60,6 +50,11 @@
 
 ## 致谢
 
-[pdf.js](https://github.com/mozilla/pdf.js) 提供 PDF 文本解析能力
-[Tesseract.js](https://github.com/naptha/tesseract.js) 提供扫描型文档 OCR 支持。
-[Jina AI Reader](https://github.com/jina-ai/reader) 作为文本解析兜底方案，以便在无法直接读取预览页或 PDF 直链时继续完成数据手册问答。
+- [Transformers.js](https://github.com/huggingface/transformers.js) — 浏览器端模型推理
+- [pdf.js](https://github.com/mozilla/pdf.js) — PDF 文档解析
+- [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) — LLM 大语言模型
+- [granite-docling-258M](https://huggingface.co/ibm-granite/granite-docling-258M) — VLM 文档视觉模型
+- [multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small) — Embedding 多语言嵌入模型
+- [Helsinki-NLP opus-mt](https://huggingface.co/Helsinki-NLP) — PDF 阅读器本地翻译模型
+- [🤗Hugging Face](https://huggingface.co/) — AI开源社区
+- [Open Neural Network Exchange](https://github.com/onnx) — ONNX社区

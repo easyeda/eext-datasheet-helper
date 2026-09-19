@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"incremental": false,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"allowJs": false,
+		"noEmit": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*.ts", "iframe/src/**/*.ts", "node_modules/@jlceda/pro-api-types/index.d.ts"]
+}

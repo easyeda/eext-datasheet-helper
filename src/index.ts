@@ -37,7 +37,7 @@ export async function onOpenChat(): Promise<void> {
 					// 过滤出 Component 类型的器件
 					let targetComp = null;
 					for (const comp of components) {
-						const compType = comp.getState_ComponentType();
+						const compType = String(comp.getState_ComponentType());
 						if (compType === 'part' || compType === 'component') {
 							targetComp = comp;
 							break;
@@ -49,7 +49,7 @@ export async function onOpenChat(): Promise<void> {
 
 					// 提取器件信息
 					const otherProp = targetComp.getState_OtherProperty();
-					const datasheetUrl = otherProp?.['Datasheet'] || otherProp?.['datasheet'] || '';
+					const datasheetUrl = String(otherProp?.Datasheet || otherProp?.datasheet || '');
 
 					deviceInfo = {
 						designator: targetComp.getState_Designator() || '',
@@ -62,7 +62,8 @@ export async function onOpenChat(): Promise<void> {
 					};
 				}
 			}
-		} catch (e) {
+		}
+		catch (e) {
 			// 获取器件信息失败不影响打开窗口，用户可手动上传PDF
 			console.warn('获取器件信息失败:', e);
 		}
@@ -71,13 +72,14 @@ export async function onOpenChat(): Promise<void> {
 		await eda.sys_Storage.setExtensionUserConfig('currentDevice', JSON.stringify(deviceInfo));
 
 		// 3. 打开IFrame对话窗口
-		await eda.sys_IFrame.openIFrame('/iframe/chat.html', 500, 680, 'datasheet-chat', {
+		await eda.sys_IFrame.openIFrame('/iframe/local.html', 500, 680, 'datasheet-chat', {
 			title: '数据手册AI助手',
 			maximizeButton: true,
 			minimizeButton: true,
 			minimizeStyle: 'collapsed',
 		});
-	} catch (err) {
+	}
+	catch (err) {
 		eda.sys_Dialog.showInformationMessage(
 			`打开失败: ${err instanceof Error ? err.message : String(err)}`,
 			'错误',

@@ -17,3 +17,13 @@
 .eslintcache
 debug.log
 
+
+/iframe/src/
+/iframe/build.ts
+/iframe/local-worker.txt
+/tsconfig.local.json
+/tests/
+/test-results/
+
+/*.tsbuildinfo
+/iframe/vlm-worker.txt

@@ -9,10 +9,23 @@
 		"node": ">=20.17.0"
 	},
 	"scripts": {
-		"compile": "rimraf ./dist/ && ts-node ./config/esbuild.prod.ts",
+		"compile": "npm run compile:iframe && rimraf ./dist/ && ts-node ./config/esbuild.prod.ts",
 		"lint": "eslint",
 		"fix": "eslint --fix",
-		"build": "npm run compile && ts-node ./build/packaged.ts"
+		"build": "npm run compile && ts-node ./build/packaged.ts",
+		"compile:iframe": "ts-node ./iframe/build.ts",
+		"typecheck": "tsc -p tsconfig.local.json",
+		"test": "node --test tests/unit.test.mjs",
+		"test:browser": "npm run compile:iframe && node tests/browser.mjs",
+		"test:models": "npm run compile:iframe && node tests/model-smoke.mjs"
+	},
+	"dependencies": {
+		"@huggingface/transformers": "4.0.1",
+		"@tesseract.js-data/chi_sim": "1.0.0",
+		"@tesseract.js-data/eng": "1.0.0",
+		"pdfjs-dist": "3.11.174",
+		"tesseract.js": "5.1.0",
+		"transformers-vlm": "npm:@huggingface/transformers@3.7.5"
 	},
 	"devDependencies": {
 		"@antfu/eslint-config": "^5.4.1",
@@ -24,6 +37,9 @@
 		"ignore": "^7.0.3",
 		"jszip": "^3.10.1",
 		"lint-staged": "^16.2.3",
+		"pdf-lib": "1.17.1",
+		"playwright": "1.63.0",
+		"prettier": "3.9.6",
 		"rimraf": "^6.0.1",
 		"simple-git-hooks": "^2.13.1",
 		"ts-node": "^10.9.2",

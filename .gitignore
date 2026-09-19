@@ -6,3 +6,11 @@
 /node_modules/
 /.eslintcache
 debug.log
+
+/iframe/local.js
+/iframe/local-worker.txt
+/iframe/assets/
+/build/dist/
+/test-results/
+/*.tsbuildinfo
+/iframe/vlm-worker.txt
